@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedCid Planner — Plano de Estudos Inteligente</title>
+
+  <meta name="theme-color" content="#6d28d9" />
+  <meta name="application-name" content="MEDCID Planner" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MEDCID" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    :root{
+      --bg:#f6f7fb; --surface:#ffffff; --surface-2:#eef2ff; --text:#141827; --muted:#667085; --line:#d9ddeb;
+      --primary:#6d28d9; --primary-2:#8b5cf6; --accent:#06b6d4; --good:#16a34a; --warn:#f59e0b; --bad:#dc2626; --info:#2563eb;
+      --shadow:0 18px 50px rgba(20,24,39,.10); --radius:22px; --radius-sm:14px;
+      --red:#ef4444; --orange:#f97316; --yellow:#eab308; --green:#22c55e;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,rgba(139,92,246,.16),transparent 34%),radial-gradient(circle at 80% 0,rgba(6,182,212,.12),transparent 30%),var(--bg);color:var(--text);min-height:100vh}
+    body.dark{--bg:#070a13;--surface:#101626;--surface-2:#151e33;--text:#f8fafc;--muted:#aab5c8;--line:#27324a;--shadow:0 24px 70px rgba(0,0,0,.44);background:radial-gradient(circle at top left,rgba(109,40,217,.35),transparent 34%),radial-gradient(circle at 80% 0,rgba(6,182,212,.20),transparent 30%),var(--bg)}
+    button,input,select,textarea{font:inherit;color:inherit}
+    button{cursor:pointer}
+    .app{max-width:1440px;margin:0 auto;padding:22px}
+    .hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:linear-gradient(135deg,rgba(109,40,217,.96),rgba(6,182,212,.88));color:#fff;border-radius:30px;padding:26px;box-shadow:var(--shadow)}
+    .hero:before{content:"";position:absolute;inset:-80px -80px auto auto;width:260px;height:260px;border-radius:999px;background:rgba(255,255,255,.14);filter:blur(2px)}
+    .hero h1{margin:4px 0 8px;font-size:clamp(2rem,5vw,4.4rem);line-height:.95;letter-spacing:-.05em}
+    .hero p{max-width:860px;margin:0;color:rgba(255,255,255,.88)}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0!important;text-transform:uppercase;font-size:.78rem;font-weight:900;letter-spacing:.16em;color:#dbeafe!important}
+    .hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;z-index:1}
+    .btn{border:0;border-radius:999px;padding:11px 15px;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;font-weight:800;box-shadow:0 10px 25px rgba(109,40,217,.22);display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:.18s ease}
+    .btn:hover{transform:translateY(-1px);filter:brightness(1.03)}
+    .btn.secondary{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);box-shadow:none;color:#fff;backdrop-filter:blur(8px)}
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);box-shadow:none}
+    .btn.soft{background:var(--surface-2);color:var(--text);border:1px solid var(--line);box-shadow:none}
+    .btn.danger{background:linear-gradient(135deg,#dc2626,#f97316)}
+    .btn.small{padding:7px 10px;font-size:.85rem}
+    .btn.full{width:100%}
+    .shell{display:grid;grid-template-columns:260px 1fr;gap:18px;margin-top:18px;align-items:start}
+    .sidebar{position:sticky;top:14px;background:rgba(255,255,255,.72);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.55);border-radius:26px;padding:14px;box-shadow:var(--shadow)}
+    body.dark .sidebar{background:rgba(16,22,38,.76);border-color:rgba(255,255,255,.07)}
+    .tab{width:100%;border:0;background:transparent;color:var(--muted);display:flex;gap:10px;align-items:center;text-align:left;border-radius:16px;padding:13px 12px;font-weight:800;margin-bottom:4px}
+    .tab.active{background:linear-gradient(135deg,rgba(109,40,217,.16),rgba(6,182,212,.12));color:var(--text)}
+    .tab .ico{width:26px;height:26px;display:grid;place-items:center;border-radius:10px;background:var(--surface-2)}
+    .quick-stats{display:grid;gap:8px;margin-top:14px}
+    .pill-stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px}.pill-stat strong{display:block;font-size:1.4rem}.pill-stat span{font-size:.8rem;color:var(--muted);font-weight:700}
+    main{min-width:0}.panel{display:none}.panel.active{display:block;animation:fade .2s ease}@keyframes fade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .grid{display:grid;gap:16px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+    .card{background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);min-width:0}.card.compact{padding:14px}.card.no-shadow{box-shadow:none}.card.glow{background:linear-gradient(135deg,rgba(109,40,217,.12),rgba(6,182,212,.10)),var(--surface)}
+    body.dark .card{background:rgba(16,22,38,.88);border-color:rgba(255,255,255,.08)}
+    h2{margin:0 0 8px;font-size:1.35rem;letter-spacing:-.03em}h3{margin:0 0 8px;font-size:1.03rem}p{color:var(--muted);line-height:1.55}.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.section-head p{margin:0}.section-head h2{margin-bottom:3px}
+    .dashboard{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}.stat{border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:14px}.stat strong{display:block;font-size:clamp(1.5rem,3vw,2.6rem);letter-spacing:-.05em}.stat span{font-size:.82rem;color:var(--muted);font-weight:800}.stat.good strong{color:var(--good)}.stat.warn strong{color:var(--warn)}.stat.bad strong{color:var(--bad)}.stat.info strong{color:var(--info)}
+    .today-list{display:grid;gap:10px;margin-top:10px}.today-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:10px}.today-item .dot{width:11px;height:11px;border-radius:999px;background:var(--primary)}.today-item small{color:var(--muted);font-weight:700}.today-item.overdue .dot{background:var(--bad)}.today-item.done{opacity:.65;text-decoration:line-through}
+    .form{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px;margin-bottom:14px}input,select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:12px;outline:none}textarea{min-height:88px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(109,40,217,.12)}label{font-size:.82rem;color:var(--muted);font-weight:900;display:block;margin-bottom:6px}.field{display:grid;gap:4px}.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.filters input,.filters select{max-width:280px}
+    .table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--line);background:var(--surface)}table{width:100%;border-collapse:collapse;min-width:760px}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:middle;font-size:.92rem}th{background:var(--surface-2);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);position:sticky;top:0;z-index:1}tr:hover td{background:rgba(109,40,217,.05)}.actions{display:flex;gap:6px;flex-wrap:wrap}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:.76rem;font-weight:900;border:1px solid var(--line);background:var(--surface-2)}.badge.red{background:rgba(239,68,68,.12);color:#ef4444}.badge.orange{background:rgba(249,115,22,.12);color:#f97316}.badge.yellow{background:rgba(234,179,8,.16);color:#ca8a04}.badge.green{background:rgba(34,197,94,.13);color:#16a34a}.badge.blue{background:rgba(37,99,235,.13);color:#2563eb}.badge.purple{background:rgba(109,40,217,.13);color:#7c3aed}.badge.gray{color:var(--muted)}
+    .subject-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.subject-card{position:relative;overflow:hidden}.subject-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--subject-color,var(--primary))}.subject-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.topic-list{display:grid;gap:8px;margin-top:12px}.topic-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:8px}.topic-row input[type="checkbox"]{width:auto}.topic-row b{font-size:.9rem}.progress{height:10px;background:var(--surface-2);border-radius:999px;overflow:hidden;border:1px solid var(--line)}.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));width:0%;transition:.25s}.meter-line{display:flex;justify-content:space-between;color:var(--muted);font-weight:800;font-size:.82rem;margin:10px 0 6px}.bar-list{display:grid;gap:12px}.bar-item{display:grid;gap:6px}.bar-head{display:flex;justify-content:space-between;gap:10px;font-weight:900;font-size:.9rem}.bar-head span:last-child{color:var(--muted)}
+    .week-grid{display:grid;grid-template-columns:80px repeat(7,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:20px;overflow:auto}.week-cell{background:var(--surface);min-height:58px;padding:7px}.week-cell.header{background:var(--surface-2);font-weight:900;text-align:center;min-height:auto;position:sticky;top:0;z-index:2}.week-cell.hour{background:var(--surface-2);font-weight:900;color:var(--muted);position:sticky;left:0;z-index:1}.block{font-size:.78rem;padding:6px;border-radius:11px;background:linear-gradient(135deg,rgba(109,40,217,.16),rgba(6,182,212,.12));border:1px solid rgba(109,40,217,.2);margin-bottom:5px;word-break:break-word}.block b{display:block}.block small{color:var(--muted);font-weight:800}.dragging{opacity:.5}.drop-target{outline:3px solid rgba(109,40,217,.28);outline-offset:-4px}
+    .timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}.timeline span{padding:12px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);font-weight:900;text-align:center;font-size:.84rem}.timeline span:not(:last-child){position:relative}.timeline span:not(:last-child)::after{content:"→";position:absolute;right:-11px;top:50%;transform:translateY(-50%);color:var(--primary);font-weight:900;z-index:1}
+    .mode-card{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}.recommendations{display:grid;gap:10px;margin-top:12px}.rec{border-left:5px solid var(--primary);background:var(--surface);border:1px solid var(--line);border-left-color:var(--primary);border-radius:14px;padding:10px}.rec strong{display:block}.rec small{color:var(--muted);font-weight:800}.campaign{display:grid;gap:14px}.world{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px}.world-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.nodes{display:flex;gap:10px;flex-wrap:wrap}.node{min-width:130px;flex:1;border-radius:18px;border:1px solid var(--line);background:var(--surface-2);padding:12px;position:relative}.node.done{background:rgba(22,163,74,.13);border-color:rgba(22,163,74,.3)}.node.hot{box-shadow:inset 0 0 0 2px rgba(239,68,68,.15)}.node .icon{font-size:1.4rem}.node b{display:block;margin:4px 0}.node small{color:var(--muted);font-weight:800}.node.boss{background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(249,115,22,.12));border-color:rgba(249,115,22,.3)}
+    .task-list{display:grid;gap:10px}.task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px}.task input{width:auto}.task.done{opacity:.65}.task.done .task-title{text-decoration:line-through}.task-title{font-weight:900}.muted{color:var(--muted)}.empty{text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:18px;padding:28px;background:var(--surface)}
+    .xp-ring{width:150px;height:150px;border-radius:999px;background:conic-gradient(var(--primary) 0deg,var(--primary) var(--deg),var(--surface-2) var(--deg),var(--surface-2) 360deg);display:grid;place-items:center;margin:auto;border:1px solid var(--line)}.xp-ring>div{width:112px;height:112px;border-radius:999px;background:var(--surface);display:grid;place-items:center;text-align:center}.xp-ring strong{display:block;font-size:2rem}.xp-ring span{font-size:.75rem;color:var(--muted);font-weight:900}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.50);display:none;place-items:center;padding:16px;z-index:99}.modal.open{display:grid}.modal-card{width:min(720px,100%);background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow)}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.modal-head button{border:0;background:var(--surface-2);border-radius:12px;padding:9px 12px}
+    .toast{position:fixed;right:18px;bottom:18px;background:var(--text);color:var(--surface);padding:12px 15px;border-radius:16px;box-shadow:var(--shadow);display:none;z-index:120;font-weight:800}.toast.show{display:block;animation:fade .2s ease}.kbd{font-family:ui-monospace,monospace;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:1px 6px;color:var(--muted)}
+
+    .install-hint{margin-top:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;font-weight:700;font-size:.88rem}
+    @media (display-mode: standalone){.hero{border-top-left-radius:0;border-top-right-radius:0}.app{padding-top:env(safe-area-inset-top)}}
+    @supports (padding:max(0px)){body{padding-left:min(0px,env(safe-area-inset-left));padding-right:min(0px,env(safe-area-inset-right));}}
+    @media (max-width:1100px){.shell{grid-template-columns:1fr}.sidebar{position:static}.tabs{display:flex;overflow:auto;gap:8px}.tab{min-width:max-content}.quick-stats{grid-template-columns:repeat(3,1fr)}.dashboard,.two{grid-template-columns:1fr}.stat-grid,.subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.four,.five,.three{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:720px){.app{padding:12px}.hero{grid-template-columns:1fr;padding:20px;border-radius:24px}.hero-actions{justify-content:flex-start}.stat-grid,.subject-grid,.quick-stats,.four,.five,.three{grid-template-columns:1fr}.section-head,.mode-card{display:grid}.timeline{grid-template-columns:1fr}.timeline span:after{display:none}.filters input,.filters select{max-width:none}.week-grid{grid-template-columns:64px repeat(7,118px)}.week-cell{min-height:64px}}
+    @media print{.sidebar,.hero-actions,.filters,.btn,.modal,.toast{display:none!important}.shell{display:block}.panel{display:block!important;margin-bottom:20px}.card{box-shadow:none}.app{max-width:none}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">⚡ MedCid Planner 2.0</p>
+        <h1>Plano de Estudos Inteligente</h1>
+        <p>Monte sua semana, gere revisões 1-3-7-14-30 automaticamente, acompanhe progresso por assunto e transforme o semestre em campanha de estudos.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="installApp" class="btn secondary" style="display:none">📲 Instalar app</button>
+        <button id="darkToggle" class="btn secondary">🌙 Modo escuro</button>
+        <button id="exportData" class="btn secondary">⬇️ Exportar</button>
+        <button id="importBtn" class="btn secondary">⬆️ Importar</button>
+        <button id="resetData" class="btn danger">Resetar</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <div class="shell">
+      <aside class="sidebar">
+        <nav class="tabs" aria-label="Abas do sistema">
+          <button class="tab active" data-tab="inicio"><span class="ico">🏠</span>Dashboard</button>
+          <button class="tab" data-tab="horario"><span class="ico">🗓️</span>Horário</button>
+          <button class="tab" data-tab="disciplinas"><span class="ico">📚</span>Disciplinas</button>
+          <button class="tab" data-tab="revisoes"><span class="ico">🔁</span>Revisões</button>
+          <button class="tab" data-tab="questoes"><span class="ico">🧠</span>Questões</button>
+          <button class="tab" data-tab="campanha"><span class="ico">🛡️</span>Campanha</button>
+          <button class="tab" data-tab="preprova"><span class="ico">🔥</span>Pré-prova</button>
+          <button class="tab" data-tab="tarefas"><span class="ico">✅</span>Tarefas</button>
+          <button class="tab" data-tab="config"><span class="ico">⚙️</span>Config</button>
+        </nav>
+        <div class="quick-stats">
+          <div class="pill-stat"><strong id="sideXP">0</strong><span>XP total</span></div>
+          <div class="pill-stat"><strong id="sideDue">0</strong><span>revisões hoje</span></div>
+          <div class="pill-stat"><strong id="sideProgress">0%</strong><span>progresso</span></div>
+        </div>
+      </aside>
+
+      <main>
+        <section id="inicio" class="panel active">
+          <div class="dashboard">
+            <article class="card glow">
+              <div class="section-head">
+                <div>
+                  <h2>Visão geral de hoje</h2>
+                  <p id="todayLabel">Carregando...</p>
+                </div>
+                <button class="btn soft" data-jump="revisoes">Ver revisões</button>
+              </div>
+              <div class="stat-grid">
+                <div class="stat info"><strong id="totalBlocks">0</strong><span>blocos semanais</span></div>
+                <div class="stat warn"><strong id="todayReviewsCount">0</strong><span>revisões hoje</span></div>
+                <div class="stat bad"><strong id="overdueReviewsCount">0</strong><span>atrasadas</span></div>
+                <div class="stat good"><strong id="overallProgress">0%</strong><span>progresso geral</span></div>
+              </div>
+              <div class="grid two" style="margin-top:16px">
+                <div>
+                  <h3>Fila de revisão</h3>
+                  <div id="todayList" class="today-list"></div>
+                </div>
+                <div>
+                  <h3>Mapa de prioridade</h3>
+                  <div id="priorityBars" class="bar-list"></div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <h2>Modo RPG</h2>
+              <div id="xpRing" class="xp-ring" style="--deg:0deg"><div><div><strong id="xpText">0</strong><span>XP</span></div></div></div>
+              <p style="text-align:center"><b id="levelText">Nível 1</b><br><span class="muted" id="nextLevelText">Faltam 100 XP para o próximo nível</span></p>
+              <div class="progress"><span id="levelBar"></span></div>
+              <div class="recommendations" id="dailyRecommendations"></div>
+            </article>
+          </div>
+
+          <article class="card" style="margin-top:16px">
+            <h2>Modelo de revisão espaçada</h2>
+            <p>A lógica principal do site segue a estrutura da planilha: primeiro contato, estudo concluído e revisões programadas em R1, R2, R3, R4 e R5.</p>
+            <div class="timeline"><span>Primeiro contato</span><span>+1 dia</span><span>+3 dias</span><span>+7 dias</span><span>+14 dias</span><span>+30 dias</span></div>
+          </article>
+        </section>
+
+        <section id="horario" class="panel">
+          <div class="section-head">
+            <div><h2>Horário semanal</h2><p>Monte seus blocos como na planilha original: DOM a SAB, de madrugada até a noite.</p></div>
+            <button id="addSchedule" class="btn">+ Adicionar bloco</button>
+          </div>
+          <form id="scheduleForm" class="form grid five">
+            <div class="field"><label>Dia</label><select id="day"><option>DOM</option><option>SEG</option><option>TER</option><option>QUA</option><option>QUI</option><option>SEX</option><option>SAB</option></select></div>
+            <div class="field"><label>Horário</label><input id="time" type="time" value="07:00" /></div>
+            <div class="field"><label>Atividade</label><input id="activity" placeholder="Disciplina/atividade" /></div>
+            <div class="field"><label>Tipo</label><select id="type"><option>Teoria</option><option>Questões</option><option>Revisão</option><option>Prática</option><option>Simulado</option><option>Livre</option><option>Não estudar</option><option>Trânsito</option><option>Sono</option></select></div>
+            <div class="field"><label>Local</label><input id="place" placeholder="Anexo, HUGV, casa..." /></div>
+          </form>
+          <div class="filters">
+            <button id="seedSchedule" class="btn soft">Preencher modelo do PDF</button>
+            <button id="clearSchedule" class="btn ghost">Limpar horário</button>
+            <span class="badge gray">Dica: arraste um bloco para outro horário.</span>
+          </div>
+          <div id="weekGrid" class="week-grid"></div>
+          <div class="table-wrap" style="margin-top:14px"><table id="scheduleTable"></table></div>
+        </section>
+
+        <section id="disciplinas" class="panel">
+          <div class="section-head">
+            <div><h2>Disciplinas e assuntos</h2><p>Cadastre peso, meta, assuntos e temperatura Pareto.</p></div>
+            <button id="addSubject" class="btn">+ Adicionar disciplina</button>
+          </div>
+          <form id="subjectForm" class="form grid five">
+            <div class="field"><label>Disciplina</label><input id="subjectName" placeholder="Ex.: Anestesiologia" /></div>
+            <div class="field"><label>Peso</label><input id="subjectWeight" type="number" min="1" value="8" /></div>
+            <div class="field"><label>Meta h/semana</label><input id="subjectGoal" type="number" min="1" value="4" /></div>
+            <div class="field"><label>Prioridade</label><select id="subjectPriority"><option>Prioritária</option><option>Complementar</option><option>Residual</option></select></div>
+            <div class="field"><label>Cor</label><input id="subjectColor" type="color" value="#7c3aed" /></div>
+          </form>
+          <div class="filters">
+            <button id="seedSubjects" class="btn soft">Preencher disciplinas do 5º período</button>
+            <button id="openTopicModal" class="btn ghost">+ Adicionar assunto</button>
+          </div>
+          <div id="subjectCards" class="subject-grid"></div>
+        </section>
+
+        <section id="revisoes" class="panel">
+          <div class="section-head">
+            <div><h2>Programar revisões</h2><p>Informe o primeiro contato. O sistema cria R1, R2, R3, R4 e R5 automaticamente.</p></div>
+            <button id="addReview" class="btn">+ Gerar revisão</button>
+          </div>
+          <form id="reviewForm" class="form grid five">
+            <div class="field"><label>Disciplina</label><input id="reviewSubject" placeholder="Disciplina" list="subjectOptions" /></div>
+            <div class="field"><label>Assunto</label><input id="reviewTopic" placeholder="Assunto/tópico" /></div>
+            <div class="field"><label>Primeiro contato</label><input id="reviewDate" type="date" /></div>
+            <div class="field"><label>Prioridade</label><select id="reviewPriority"><option>Alta</option><option>Média</option><option>Baixa</option></select></div>
+            <div class="field"><label>Atividade</label><select id="reviewKind"><option>Teoria</option><option>Questões</option><option>Resumo</option><option>Aula</option></select></div>
+          </form>
+          <div class="filters">
+            <input id="reviewFilter" placeholder="Filtrar por disciplina, tópico ou data" />
+            <select id="reviewStatus"><option value="all">Todas</option><option value="today">Hoje</option><option value="overdue">Atrasadas</option><option value="pending">Pendentes</option><option value="done">Concluídas</option></select>
+            <button id="generateFromTopics" class="btn soft">Gerar revisão dos assuntos concluídos</button>
+          </div>
+          <div class="table-wrap"><table id="reviewTable"></table></div>
+        </section>
+
+        <section id="questoes" class="panel">
+          <div class="section-head">
+            <div><h2>Banco de questões e erros</h2><p>Registre desempenho por assunto. O site identifica pontos fracos.</p></div>
+            <button id="addQuestionSession" class="btn">+ Registrar sessão</button>
+          </div>
+          <form id="questionForm" class="form grid five">
+            <div class="field"><label>Disciplina</label><input id="qSubject" list="subjectOptions" placeholder="Disciplina" /></div>
+            <div class="field"><label>Assunto</label><input id="qTopic" placeholder="Assunto" /></div>
+            <div class="field"><label>Questões</label><input id="qTotal" type="number" min="1" value="10" /></div>
+            <div class="field"><label>Acertos</label><input id="qCorrect" type="number" min="0" value="7" /></div>
+            <div class="field"><label>Data</label><input id="qDate" type="date" /></div>
+          </form>
+          <div class="filters"><input id="questionFilter" placeholder="Filtrar desempenho" /><button id="weaknessMode" class="btn soft">Mostrar pontos fracos</button></div>
+          <div class="grid two">
+            <div class="card compact no-shadow"><h3>Desempenho por assunto</h3><div id="questionBars" class="bar-list"></div></div>
+            <div class="table-wrap"><table id="questionTable"></table></div>
+          </div>
+        </section>
+
+        <section id="campanha" class="panel">
+          <div class="section-head">
+            <div><h2>Mapa de campanha do semestre</h2><p>Cada disciplina vira um mundo; cada assunto vira uma fase; prova é chefe.</p></div>
+            <button id="seedTopics" class="btn soft">Preencher assuntos-base</button>
+          </div>
+          <div id="campaignArea" class="campaign"></div>
+        </section>
+
+        <section id="preprova" class="panel">
+          <article class="card glow">
+            <div class="mode-card">
+              <div>
+                <h2>Modo Pré-Prova</h2>
+                <p>Quando faltar pouco tempo, o sistema muda a estratégia para mais questões e revisão, deixando teoria pesada só para lacunas críticas.</p>
+              </div>
+              <button id="activatePreExam" class="btn danger">Ativar plano</button>
+            </div>
+            <form class="form grid four" style="margin-top:14px">
+              <div class="field"><label>Disciplina/prova</label><input id="examSubject" list="subjectOptions" placeholder="Ex.: Anestesiologia" /></div>
+              <div class="field"><label>Data da prova</label><input id="examDate" type="date" /></div>
+              <div class="field"><label>Horas por dia</label><input id="examHours" type="number" min="1" value="4" /></div>
+              <div class="field"><label>Estratégia</label><select id="examStrategy"><option>7 dias: 70% questões</option><option>14 dias: equilibrado</option><option>3 dias: revisão final</option></select></div>
+            </form>
+            <div id="preExamPlan" class="recommendations"></div>
+          </article>
+        </section>
+
+        <section id="tarefas" class="panel">
+          <div class="section-head">
+            <div><h2>Tarefas rápidas</h2><p>Use para questões, simulados, leitura, aula, pendências e revisão de erros.</p></div>
+            <button id="addTask" class="btn">+ Adicionar tarefa</button>
+          </div>
+          <form id="taskForm" class="form grid five">
+            <div class="field"><label>Tarefa</label><input id="taskTitle" placeholder="Ex.: 20 questões de choque" /></div>
+            <div class="field"><label>Disciplina</label><input id="taskSubject" list="subjectOptions" placeholder="Disciplina" /></div>
+            <div class="field"><label>Data</label><input id="taskDate" type="date" /></div>
+            <div class="field"><label>Tipo</label><select id="taskKind"><option>Teoria</option><option>Questões</option><option>Revisão</option><option>Simulado</option><option>Resumo</option></select></div>
+            <div class="field"><label>XP</label><input id="taskXP" type="number" min="5" value="20" /></div>
+          </form>
+          <div class="filters"><select id="taskFilter"><option value="all">Todas</option><option value="today">Hoje</option><option value="pending">Pendentes</option><option value="done">Concluídas</option></select></div>
+          <div id="taskList" class="task-list"></div>
+        </section>
+
+        <section id="config" class="panel">
+          <div class="grid two">
+            <article class="card">
+              <h2>Configurações</h2>
+              <form class="form grid two">
+                <div class="field"><label>Data de início dos estudos</label><input id="startDate" type="date" /></div>
+                <div class="field"><label>Meta semanal de horas</label><input id="weeklyGoal" type="number" min="1" value="34" /></div>
+                <div class="field"><label>Meta diária de questões</label><input id="dailyQuestionsGoal" type="number" min="1" value="30" /></div>
+                <div class="field"><label>Nome do ciclo</label><input id="cycleName" placeholder="5º período" /></div>
+              </form>
+              <button id="saveConfig" class="btn">Salvar configurações</button>
+            </article>
+            <article class="card">
+              <h2>Ajuda rápida</h2>
+              <p><b>Fluxo ideal:</b> registre o assunto em Disciplinas, marque quando estudar, gere revisões, faça questões e use o Dashboard para decidir o que fazer hoje.</p>
+              <p><b>Atalhos mentais:</b> vermelho = muito cobrado; laranja = cobrado; amarelo = ocasional; verde = raro.</p>
+              <p><b>Backup:</b> use Exportar toda semana. O site salva tudo no navegador por <span class="kbd">localStorage</span>.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <datalist id="subjectOptions"></datalist>
+
+  <div id="topicModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h2>Adicionar assunto</h2><button data-close-modal>✕</button></div>
+      <form id="topicForm" class="grid two">
+        <div class="field"><label>Disciplina</label><select id="topicSubject"></select></div>
+        <div class="field"><label>Temperatura</label><select id="topicHeat"><option>Muito cobrado</option><option>Cobrado</option><option>Ocasional</option><option>Raro</option></select></div>
+        <div class="field" style="grid-column:1/-1"><label>Assunto</label><input id="topicName" placeholder="Ex.: Via aérea difícil" /></div>
+        <div class="field"><label>Dificuldade</label><select id="topicDifficulty"><option>Fácil</option><option>Médio</option><option>Difícil</option></select></div>
+        <div class="field"><label>Custo-benefício</label><select id="topicROI"><option>Alto</option><option>Médio</option><option>Baixo</option></select></div>
+        <button class="btn" type="submit" style="grid-column:1/-1">Salvar assunto</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'medcid_planner_v2';
+    const DAYS = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
+    const HOURS = ['04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00'];
+    const REVIEW_STEPS = [
+      {label:'R1', days:1, xp:20}, {label:'R2', days:3, xp:20}, {label:'R3', days:7, xp:25}, {label:'R4', days:14, xp:30}, {label:'R5', days:30, xp:40}
+    ];
+    const HEAT = {'Muito cobrado':'red','Cobrado':'orange','Ocasional':'yellow','Raro':'green'};
+    const XP = {study:10, task:20, question:25, topic:25};
+
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+    const todayISO = () => new Date().toISOString().slice(0,10);
+    const parseISO = iso => {
+      const [y,m,d] = String(iso).split('-').map(Number);
+      return new Date(y, (m||1)-1, d||1);
+    };
+    const addDays = (iso, days) => {
+      const d = parseISO(iso); d.setDate(d.getDate()+days);
+      return d.toISOString().slice(0,10);
+    };
+    const fmtDate = iso => {
+      if(!iso) return '—';
+      const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`;
+    };
+    const diffDays = (from,to=todayISO()) => Math.round((parseISO(from)-parseISO(to))/86400000);
+    const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+    const normalize = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+    const defaultSubjects = [
+      {name:'Clínica Médica', weight:8, goal:12, priority:'Prioritária', color:'#f59e0b'},
+      {name:'Clínica Cirúrgica', weight:6, goal:8, priority:'Prioritária', color:'#e05252'},
+      {name:'Epidemio Clínica', weight:2, goal:3, priority:'Complementar', color:'#f6d365'},
+      {name:'Pato Especial II', weight:3, goal:4, priority:'Complementar', color:'#60a5fa'},
+      {name:'Psiquiatria', weight:3, goal:4, priority:'Complementar', color:'#ec0ed7'},
+      {name:'Anestesiologia', weight:2, goal:2, priority:'Complementar', color:'#7c3aed'},
+      {name:'Bioquímica Clínica', weight:3, goal:5, priority:'Complementar', color:'#1d4ed8'}
+    ];
+
+    const defaultTopics = {
+      'Anestesiologia': [
+        ['Avaliação pré-anestésica','Muito cobrado','Médio','Alto'], ['Monitorização perioperatória','Cobrado','Fácil','Alto'], ['Via aérea difícil','Muito cobrado','Difícil','Alto'], ['RCP/PCR','Muito cobrado','Médio','Alto'], ['Choque e reposição volêmica','Cobrado','Médio','Alto'], ['Anestésicos locais','Muito cobrado','Médio','Alto'], ['Bloqueios periféricos','Cobrado','Médio','Médio'], ['Bloqueio do neuroeixo','Muito cobrado','Médio','Alto'], ['Anestesia venosa e sedação','Muito cobrado','Médio','Alto'], ['Bloqueadores neuromusculares','Cobrado','Médio','Alto'], ['Ventilação mecânica','Muito cobrado','Difícil','Alto'], ['Dor aguda e crônica','Cobrado','Fácil','Médio']
+      ],
+      'Clínica Médica': [
+        ['Asma','Muito cobrado','Médio','Alto'], ['DPOC','Muito cobrado','Médio','Alto'], ['Tuberculose','Muito cobrado','Médio','Alto'], ['Pneumonia adquirida na comunidade','Muito cobrado','Médio','Alto'], ['Bronquiectasias','Cobrado','Médio','Médio'], ['Derrame pleural e empiema','Muito cobrado','Difícil','Alto'], ['Semiologia cardiovascular','Muito cobrado','Fácil','Alto'], ['ECG básico','Muito cobrado','Difícil','Alto'], ['Insuficiência cardíaca','Muito cobrado','Médio','Alto'], ['SCA/IAM','Muito cobrado','Difícil','Alto'], ['HAS','Cobrado','Fácil','Alto'], ['Valvopatias','Cobrado','Médio','Médio']
+      ],
+      'Clínica Cirúrgica': [
+        ['Pré-operatório e risco cirúrgico','Muito cobrado','Médio','Alto'], ['Pós-operatório','Cobrado','Médio','Alto'], ['Choque','Muito cobrado','Médio','Alto'], ['Queimaduras','Cobrado','Médio','Médio'], ['Abdome agudo','Muito cobrado','Difícil','Alto'], ['Apendicite','Muito cobrado','Fácil','Alto'], ['HDA/HDB','Muito cobrado','Médio','Alto'], ['Vias biliares','Muito cobrado','Médio','Alto'], ['Diverticulite','Cobrado','Médio','Médio'], ['Pancreatite','Muito cobrado','Médio','Alto'], ['Politrauma','Muito cobrado','Difícil','Alto'], ['Hérnias','Cobrado','Fácil','Alto']
+      ],
+      'Pato Especial II': [
+        ['Patologia do SNC','Cobrado','Médio','Médio'], ['Hipertensão intracraniana','Cobrado','Médio','Médio'], ['AVC isquêmico e hemorrágico','Muito cobrado','Médio','Alto'], ['Tumores do SNC','Cobrado','Difícil','Médio'], ['Patologia óssea','Ocasional','Médio','Médio'], ['Meningites','Cobrado','Médio','Médio'], ['Patologia tireoidiana','Muito cobrado','Médio','Alto'], ['Patologia linfoide','Muito cobrado','Médio','Alto'], ['Linfomas','Muito cobrado','Difícil','Alto'], ['Patologia renal','Cobrado','Médio','Médio'], ['Patologia da mama e próstata','Cobrado','Médio','Médio']
+      ],
+      'Psiquiatria': [
+        ['Exame psíquico','Muito cobrado','Fácil','Alto'], ['Emergências psiquiátricas','Muito cobrado','Médio','Alto'], ['Delirium','Cobrado','Médio','Alto'], ['Transtornos por substâncias','Cobrado','Médio','Médio'], ['Transtornos do humor','Muito cobrado','Médio','Alto'], ['Esquizofrenia e psicóticos','Muito cobrado','Médio','Alto'], ['Psicofármacos','Muito cobrado','Difícil','Alto']
+      ],
+      'Epidemio Clínica': [
+        ['Medicina baseada em evidências','Muito cobrado','Médio','Alto'], ['Causalidade','Cobrado','Médio','Médio'], ['Medidas de frequência','Muito cobrado','Fácil','Alto'], ['Caso-controle','Muito cobrado','Médio','Alto'], ['Coorte','Muito cobrado','Médio','Alto'], ['Diagnóstico','Muito cobrado','Médio','Alto'], ['Prognóstico','Cobrado','Médio','Médio'], ['Revisão sistemática e metanálise','Cobrado','Difícil','Médio']
+      ],
+      'Bioquímica Clínica': [
+        ['Função renal','Muito cobrado','Médio','Alto'], ['Função hepática','Muito cobrado','Médio','Alto'], ['Gasometria e equilíbrio ácido-base','Muito cobrado','Difícil','Alto'], ['Diabetes e glicemia','Cobrado','Fácil','Alto'], ['Marcadores cardíacos','Cobrado','Médio','Médio']
+      ]
+    };
+
+    const pdfSchedule = [
+      ['DOM','04:00','DORMIR','Sono',''],['DOM','05:00','CAFÉ + MDO','Rotina',''],['DOM','06:00','ACADEMIA','Prática',''],['DOM','07:00','Livre','Livre',''],['DOM','08:00','Clínica Médica','Teoria',''],['DOM','09:00','Clínica Médica','Teoria',''],['DOM','10:00','Pato Especial II','Teoria',''],['DOM','11:00','Pato Especial II','Teoria',''],['DOM','12:00','ALMOÇO','Livre',''],['DOM','13:00','Clínica Cirúrgica','Teoria',''],['DOM','14:00','Clínica Cirúrgica','Teoria',''],['DOM','16:00','SENIB','Livre',''],['DOM','18:00','CULTO','Livre',''],['DOM','22:00','Psiquiatria','Teoria',''],['DOM','23:00','Psiquiatria','Teoria',''],
+      ['SEG','05:00','CAFÉ + MDO','Rotina',''],['SEG','06:00','ACADEMIA','Prática',''],['SEG','08:00','Clínica Médica - prática','Prática',''],['SEG','09:00','Clínica Médica - prática','Prática',''],['SEG','10:00','Clínica Médica - prática','Prática',''],['SEG','11:00','Clínica Médica - prática','Prática',''],['SEG','13:00','Pato Especial II','Teoria',''],['SEG','14:00','Clínica Cirúrgica','Teoria',''],['SEG','16:00','Anestesiologia','Teoria',''],['SEG','17:00','Pato Especial II','Teoria',''],['SEG','18:00','Pato Especial II','Teoria',''],['SEG','19:00','Pato Especial II','Teoria',''],['SEG','21:00','Clínica Médica','Teoria',''],['SEG','22:00','Clínica Médica','Teoria',''],
+      ['TER','05:00','CAFÉ + MDO','Rotina',''],['TER','06:00','ACADEMIA','Prática',''],['TER','08:00','Clínica Cirúrgica - prática','Prática',''],['TER','09:00','Clínica Cirúrgica - prática','Prática',''],['TER','10:00','Clínica Cirúrgica - prática','Prática',''],['TER','11:00','Clínica Cirúrgica - prática','Prática',''],['TER','13:00','Epidemio Clínica','Teoria',''],['TER','14:00','Epidemio Clínica','Teoria',''],['TER','15:00','Epidemio Clínica','Teoria',''],['TER','16:00','Psiquiatria','Teoria',''],['TER','17:00','Psiquiatria','Teoria',''],['TER','18:00','JIU-JITSU','Prática',''],['TER','20:00','Clínica Médica','Teoria',''],['TER','21:00','Clínica Médica','Teoria',''],['TER','22:00','Psiquiatria','Teoria',''],['TER','23:00','Psiquiatria','Teoria',''],
+      ['QUA','04:00','CAFÉ + MDO','Rotina',''],['QUA','05:00','ACADEMIA','Prática',''],['QUA','07:00','Clínica Médica','Teoria',''],['QUA','08:00','Clínica Médica','Teoria',''],['QUA','09:00','Clínica Médica','Teoria',''],['QUA','10:00','Clínica Médica','Teoria',''],['QUA','11:00','Clínica Médica','Teoria',''],['QUA','13:00','Psiquiatria','Teoria',''],['QUA','14:00','Clínica Cirúrgica','Teoria',''],['QUA','15:00','Clínica Cirúrgica','Teoria',''],['QUA','16:00','Clínica Cirúrgica','Teoria',''],['QUA','17:00','Clínica Cirúrgica','Teoria',''],['QUA','18:00','Livre','Livre',''],['QUA','19:00','JIU-JITSU','Prática',''],['QUA','21:00','Anestesiologia','Teoria',''],['QUA','22:00','Anestesiologia','Teoria',''],['QUA','23:00','Anestesiologia','Teoria',''],
+      ['QUI','04:00','CAFÉ + MDO','Rotina',''],['QUI','05:00','ACADEMIA','Prática',''],['QUI','07:00','Clínica Médica','Teoria',''],['QUI','08:00','Clínica Médica','Teoria',''],['QUI','09:00','Clínica Médica','Teoria',''],['QUI','10:00','MONITORIA','Prática',''],['QUI','11:00','MONITORIA','Prática',''],['QUI','13:00','Clínica Cirúrgica','Teoria',''],['QUI','14:00','Anestesiologia','Teoria',''],['QUI','15:00','Anestesiologia','Teoria',''],['QUI','16:00','OPTATIVA','Livre',''],['QUI','17:00','OPTATIVA','Livre',''],['QUI','18:00','OPTATIVA','Livre',''],['QUI','20:00','Bioquímica Clínica','Teoria',''],['QUI','21:00','Bioquímica Clínica','Teoria',''],['QUI','22:00','Bioquímica Clínica','Teoria',''],['QUI','23:00','Bioquímica Clínica','Teoria',''],
+      ['SEX','05:00','CAFÉ + MDO','Rotina',''],['SEX','06:00','ACADEMIA','Prática',''],['SEX','08:00','Clínica Médica - prática','Prática',''],['SEX','09:00','Clínica Médica - prática','Prática',''],['SEX','10:00','Clínica Médica - prática','Prática',''],['SEX','11:00','Clínica Médica - prática','Prática',''],['SEX','13:00','Psiquiatria','Teoria',''],['SEX','15:00','Clínica Médica','Teoria',''],['SEX','16:00','Clínica Médica','Teoria',''],['SEX','17:00','Clínica Cirúrgica','Teoria',''],['SEX','18:00','Clínica Cirúrgica','Teoria',''],['SEX','19:00','CULTO','Livre',''],['SEX','21:00','Pato Especial II','Teoria',''],['SEX','22:00','Pato Especial II','Teoria',''],
+      ['SAB','05:00','CAFÉ + MDO','Rotina',''],['SAB','07:00','Clínica Cirúrgica','Teoria',''],['SAB','08:00','Clínica Cirúrgica','Teoria',''],['SAB','10:00','Bioquímica Clínica','Teoria',''],['SAB','11:00','Bioquímica Clínica','Teoria',''],['SAB','13:00','Livre','Livre',''],['SAB','15:00','ACRO','Prática',''],['SAB','16:00','ACRO','Prática',''],['SAB','17:00','G.A','Livre',''],['SAB','18:00','G.A','Livre',''],['SAB','19:00','CULTO','Livre',''],['SAB','20:00','CULTO','Livre',''],['SAB','23:00','Epidemio Clínica','Teoria',''],['SAB','00:00','Epidemio Clínica','Teoria',''],['SAB','01:00','Epidemio Clínica','Teoria','']
+    ];
+
+    let state = loadState();
+    let reviewOnlyWeakness = false;
+
+    function loadState(){
+      try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+      const start = todayISO();
+      return {config:{startDate:start, weeklyGoal:34, dailyQuestionsGoal:30, cycleName:'5º período'}, subjects:[], schedule:[], reviews:[], tasks:[], questions:[], xp:0, dark:false};
+    }
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._timer); toast._timer=setTimeout(()=>t.classList.remove('show'),2200); }
+    function award(points){ state.xp = (state.xp||0)+Number(points||0); save(); renderAll(); }
+
+
+    let deferredInstallPrompt = null;
+    function setupPWA(){
+      const installBtn = $('#installApp');
+      if('serviceWorker' in navigator){
+        window.addEventListener('load',()=>{
+          navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+        });
+      }
+      window.addEventListener('beforeinstallprompt', (event)=>{
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        if(installBtn) installBtn.style.display = 'inline-flex';
+      });
+      if(installBtn){
+        installBtn.addEventListener('click', async ()=>{
+          if(deferredInstallPrompt){
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            installBtn.style.display = 'none';
+          } else {
+            toast('No iPhone: Safari > Compartilhar > Adicionar à Tela de Início. No Android: Chrome > Instalar app.');
+          }
+        });
+      }
+      window.addEventListener('appinstalled',()=>toast('MEDCID instalado na tela inicial.'));
+    }
+
+    function init(){
+      document.body.classList.toggle('dark', !!state.dark);
+      setupPWA();
+      $('#reviewDate').value = todayISO(); $('#qDate').value = todayISO(); $('#taskDate').value = todayISO(); $('#startDate').value = state.config.startDate || todayISO();
+      $('#weeklyGoal').value = state.config.weeklyGoal || 34; $('#dailyQuestionsGoal').value = state.config.dailyQuestionsGoal || 30; $('#cycleName').value = state.config.cycleName || '5º período';
+      bindEvents(); renderAll();
+    }
+
+    function bindEvents(){
+      $$('.tab').forEach(btn=>btn.addEventListener('click',()=>showTab(btn.dataset.tab)));
+      $$('[data-jump]').forEach(btn=>btn.addEventListener('click',()=>showTab(btn.dataset.jump)));
+      $('#darkToggle').addEventListener('click',()=>{state.dark=!state.dark; document.body.classList.toggle('dark',state.dark); save();});
+      $('#resetData').addEventListener('click',()=>{ if(confirm('Apagar todos os dados salvos neste navegador?')){ localStorage.removeItem(STORAGE_KEY); state=loadState(); init(); toast('Dados resetados.'); }});
+      $('#exportData').addEventListener('click',exportData); $('#importBtn').addEventListener('click',()=>$('#importFile').click()); $('#importFile').addEventListener('change',importData);
+      $('#addSchedule').addEventListener('click',addSchedule); $('#seedSchedule').addEventListener('click',seedSchedule); $('#clearSchedule').addEventListener('click',()=>{ if(confirm('Limpar todos os blocos do horário?')){state.schedule=[]; save(); renderAll();}});
+      $('#addSubject').addEventListener('click',addSubject); $('#seedSubjects').addEventListener('click',seedSubjects); $('#openTopicModal').addEventListener('click',openTopicModal); $('[data-close-modal]').addEventListener('click',closeTopicModal); $('#topicModal').addEventListener('click',e=>{if(e.target.id==='topicModal') closeTopicModal();}); $('#topicForm').addEventListener('submit',addTopic);
+      $('#addReview').addEventListener('click',addReview); $('#reviewFilter').addEventListener('input',renderReviews); $('#reviewStatus').addEventListener('change',renderReviews); $('#generateFromTopics').addEventListener('click',generateFromTopics);
+      $('#addQuestionSession').addEventListener('click',addQuestionSession); $('#questionFilter').addEventListener('input',renderQuestions); $('#weaknessMode').addEventListener('click',()=>{reviewOnlyWeakness=!reviewOnlyWeakness; $('#weaknessMode').textContent=reviewOnlyWeakness?'Mostrar todos':'Mostrar pontos fracos'; renderQuestions();});
+      $('#seedTopics').addEventListener('click',seedTopics); $('#activatePreExam').addEventListener('click',activatePreExam);
+      $('#addTask').addEventListener('click',addTask); $('#taskFilter').addEventListener('change',renderTasks); $('#saveConfig').addEventListener('click',saveConfig);
+    }
+
+    function showTab(id){
+      $$('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+      $$('.panel').forEach(p=>p.classList.toggle('active', p.id===id));
+      window.scrollTo({top:0,behavior:'smooth'});
+      renderAll();
+    }
+
+    function renderAll(){
+      renderDatalist(); renderDashboard(); renderSchedule(); renderSubjects(); renderReviews(); renderQuestions(); renderCampaign(); renderTasks(); renderSidebar();
+    }
+
+    function renderSidebar(){
+      const prog = calcOverallProgress(); const due=todaysReviews().length;
+      $('#sideXP').textContent = state.xp||0; $('#sideDue').textContent=due; $('#sideProgress').textContent=prog+'%';
+    }
+
+    function renderDatalist(){
+      $('#subjectOptions').innerHTML = state.subjects.map(s=>`<option value="${escapeHtml(s.name)}"></option>`).join('');
+      const select=$('#topicSubject'); if(select) select.innerHTML = state.subjects.map(s=>`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join('');
+    }
+
+    function calcOverallProgress(){
+      const topics = state.subjects.flatMap(s=>s.topics||[]);
+      const topicDone = topics.filter(t=>t.done).length;
+      const reviews = state.reviews.flatMap(r=>r.items||[]);
+      const reviewDone = reviews.filter(r=>r.done).length;
+      const tasksDone = state.tasks.filter(t=>t.done).length;
+      const denom = topics.length + reviews.length + state.tasks.length;
+      const num = topicDone + reviewDone + tasksDone;
+      return denom ? Math.round(num/denom*100) : 0;
+    }
+    function todaysReviews(){ const t=todayISO(); return state.reviews.flatMap(r=>(r.items||[]).map(it=>({...it,parent:r}))).filter(it=>it.date===t && !it.done); }
+    function overdueReviews(){ const t=todayISO(); return state.reviews.flatMap(r=>(r.items||[]).map(it=>({...it,parent:r}))).filter(it=>it.date<t && !it.done); }
+    function pendingReviews(){ return state.reviews.flatMap(r=>(r.items||[]).map(it=>({...it,parent:r}))).filter(it=>!it.done); }
+
+    function renderDashboard(){
+      const today = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+      $('#todayLabel').textContent = `Hoje é ${today}. Prioridade: revisões vencidas primeiro, depois questões dos pontos fracos.`;
+      $('#totalBlocks').textContent = state.schedule.length;
+      $('#todayReviewsCount').textContent = todaysReviews().length;
+      $('#overdueReviewsCount').textContent = overdueReviews().length;
+      $('#overallProgress').textContent = calcOverallProgress()+'%';
+      renderTodayList(); renderPriorityBars(); renderXP(); renderDailyRecommendations();
+    }
+    function renderTodayList(){
+      const list = [...overdueReviews().slice(0,6), ...todaysReviews().slice(0,6)].slice(0,8);
+      $('#todayList').innerHTML = list.length ? list.map(it=>`
+        <div class="today-item ${it.date<todayISO()?'overdue':''}">
+          <span class="dot"></span><div><b>${escapeHtml(it.parent.topic)}</b><br><small>${escapeHtml(it.parent.subject)} · ${it.label} · ${fmtDate(it.date)}</small></div>
+          <button class="btn small soft" onclick="completeReview('${it.parent.id}','${it.id}')">Check</button>
+        </div>`).join('') : `<div class="empty">Nenhuma revisão para hoje. Gere revisões na aba Revisões ou estude um assunto novo.</div>`;
+    }
+    function renderPriorityBars(){
+      const counts = {'Muito cobrado':0,'Cobrado':0,'Ocasional':0,'Raro':0};
+      state.subjects.forEach(s=>(s.topics||[]).forEach(t=>counts[t.heat||'Ocasional']++));
+      const max = Math.max(1,...Object.values(counts));
+      $('#priorityBars').innerHTML = Object.entries(counts).map(([k,v])=>`
+        <div class="bar-item"><div class="bar-head"><span><span class="badge ${HEAT[k]}">${k}</span></span><span>${v} assuntos</span></div><div class="progress"><span style="width:${v/max*100}%"></span></div></div>`).join('');
+    }
+    function renderXP(){
+      const xp = state.xp||0; const level = Math.floor(xp/100)+1; const rem = xp%100; const deg = rem*3.6;
+      $('#xpRing').style.setProperty('--deg',deg+'deg'); $('#xpText').textContent=xp; $('#levelText').textContent=`Nível ${level}`; $('#nextLevelText').textContent=`Faltam ${100-rem} XP para o próximo nível`; $('#levelBar').style.width=rem+'%';
+    }
+    function renderDailyRecommendations(){
+      const weak = getWeakTopics().slice(0,3); const overdue = overdueReviews().length; const today = todaysReviews().length;
+      const recs=[];
+      if(overdue) recs.push(['Revisões atrasadas',`Faça ${Math.min(overdue,5)} revisões antes de conteúdo novo.`]);
+      if(today) recs.push(['Revisões de hoje',`Feche ${Math.min(today,5)} cards para manter a curva de esquecimento sob controle.`]);
+      if(weak.length) recs.push(['Pontos fracos',`Comece por ${weak.map(w=>w.topic).join(', ')}.`]);
+      if(!recs.length) recs.push(['Livre para avançar', 'Escolha um assunto muito cobrado e registre o primeiro contato.']);
+      $('#dailyRecommendations').innerHTML = recs.map(r=>`<div class="rec"><strong>${r[0]}</strong><small>${r[1]}</small></div>`).join('');
+    }
+
+    function addSchedule(e){ e.preventDefault();
+      const activity=$('#activity').value.trim(); if(!activity) return toast('Informe a atividade.');
+      state.schedule.push({id:uid(),day:$('#day').value,time:$('#time').value,activity,type:$('#type').value,place:$('#place').value.trim()});
+      $('#activity').value=''; $('#place').value=''; save(); renderAll(); toast('Bloco adicionado.');
+    }
+    function seedSchedule(){
+      const existing = new Set(state.schedule.map(b=>`${b.day}-${b.time}-${normalize(b.activity)}`));
+      pdfSchedule.forEach(([day,time,activity,type,place])=>{const k=`${day}-${time}-${normalize(activity)}`; if(!existing.has(k)) state.schedule.push({id:uid(),day,time,activity,type,place});});
+      save(); renderAll(); toast('Horário preenchido com o modelo do PDF.');
+    }
+    function renderSchedule(){ renderWeekGrid(); renderScheduleTable(); }
+    function renderWeekGrid(){
+      const grid=$('#weekGrid'); let html='<div class="week-cell header"></div>'+DAYS.map(d=>`<div class="week-cell header">${d}</div>`).join('');
+      HOURS.forEach(hour=>{
+        html += `<div class="week-cell hour">${hour}</div>`;
+        DAYS.forEach(day=>{
+          const blocks=state.schedule.filter(b=>b.day===day && b.time===hour);
+          html += `<div class="week-cell" data-day="${day}" data-time="${hour}">${blocks.map(b=>`
+            <div class="block" draggable="true" data-block="${b.id}" style="border-left:5px solid ${subjectColor(b.activity)}"><b>${escapeHtml(b.activity)}</b><small>${escapeHtml(b.type)} ${b.place?'· '+escapeHtml(b.place):''}</small></div>`).join('')}</div>`;
+        });
+      });
+      grid.innerHTML=html;
+      $$('.block').forEach(el=>{
+        el.addEventListener('dragstart',e=>{el.classList.add('dragging'); e.dataTransfer.setData('text/plain',el.dataset.block);});
+        el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+      });
+      $$('.week-cell[data-day]').forEach(cell=>{
+        cell.addEventListener('dragover',e=>{e.preventDefault(); cell.classList.add('drop-target');});
+        cell.addEventListener('dragleave',()=>cell.classList.remove('drop-target'));
+        cell.addEventListener('drop',e=>{e.preventDefault(); cell.classList.remove('drop-target'); const id=e.dataTransfer.getData('text/plain'); const b=state.schedule.find(x=>x.id===id); if(b){b.day=cell.dataset.day; b.time=cell.dataset.time; save(); renderAll();}});
+      });
+    }
+    function renderScheduleTable(){
+      const rows=[...state.schedule].sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day)||a.time.localeCompare(b.time));
+      $('#scheduleTable').innerHTML = `<thead><tr><th>Dia</th><th>Hora</th><th>Atividade</th><th>Tipo</th><th>Local</th><th>Ações</th></tr></thead><tbody>${rows.map(b=>`
+        <tr><td><b>${b.day}</b></td><td>${b.time}</td><td>${escapeHtml(b.activity)}</td><td>${escapeHtml(b.type)}</td><td>${escapeHtml(b.place||'')}</td><td class="actions"><button class="btn small soft" onclick="deleteSchedule('${b.id}')">Excluir</button></td></tr>`).join('') || `<tr><td colspan="6"><div class="empty">Nenhum bloco cadastrado.</div></td></tr>`}</tbody>`;
+    }
+    function deleteSchedule(id){ state.schedule=state.schedule.filter(b=>b.id!==id); save(); renderAll(); }
+
+    function subjectColor(activity){ const a=normalize(activity); const s=state.subjects.find(x=>a.includes(normalize(x.name)) || normalize(x.name).includes(a)); return s?.color || 'rgba(109,40,217,.7)'; }
+    function addSubject(e){ e.preventDefault();
+      const name=$('#subjectName').value.trim(); if(!name) return toast('Informe a disciplina.');
+      if(state.subjects.some(s=>normalize(s.name)===normalize(name))) return toast('Essa disciplina já existe.');
+      state.subjects.push({id:uid(),name,weight:Number($('#subjectWeight').value||1),goal:Number($('#subjectGoal').value||1),priority:$('#subjectPriority').value,color:$('#subjectColor').value,topics:[]});
+      $('#subjectName').value=''; save(); renderAll(); toast('Disciplina adicionada.');
+    }
+    function seedSubjects(){
+      defaultSubjects.forEach(s=>{ if(!state.subjects.some(x=>normalize(x.name)===normalize(s.name))) state.subjects.push({id:uid(),...s,topics:[]}); });
+      save(); renderAll(); toast('Disciplinas do 5º período preenchidas.');
+    }
+    function seedTopics(){
+      if(!state.subjects.length) seedSubjects();
+      state.subjects.forEach(s=>{
+        const arr = defaultTopics[s.name] || [];
+        s.topics = s.topics || [];
+        arr.forEach(([name,heat,difficulty,roi])=>{ if(!s.topics.some(t=>normalize(t.name)===normalize(name))) s.topics.push({id:uid(),name,heat,difficulty,roi,done:false,created:todayISO()}); });
+      });
+      save(); renderAll(); toast('Assuntos-base preenchidos.');
+    }
+    function renderSubjects(){
+      const area=$('#subjectCards');
+      area.innerHTML = state.subjects.length ? state.subjects.map(s=>{
+        const total=(s.topics||[]).length; const done=(s.topics||[]).filter(t=>t.done).length; const pct=total?Math.round(done/total*100):0;
+        return `<article class="card subject-card" style="--subject-color:${s.color}">
+          <div class="subject-title"><div><h3>${escapeHtml(s.name)}</h3><span class="badge purple">Peso ${s.weight}</span> <span class="badge blue">${s.goal}h/sem</span> <span class="badge gray">${escapeHtml(s.priority)}</span></div><button class="btn small soft" onclick="deleteSubject('${s.id}')">Excluir</button></div>
+          <div class="meter-line"><span>${done}/${total} assuntos</span><span>${pct}%</span></div><div class="progress"><span style="width:${pct}%"></span></div>
+          <div class="topic-list">${(s.topics||[]).slice(0,8).map(t=>topicHTML(s.id,t)).join('') || '<div class="empty">Sem assuntos.</div>'}</div>
+          ${(s.topics||[]).length>8?`<p class="muted">+${s.topics.length-8} assuntos no mapa de campanha.</p>`:''}
+        </article>`;
+      }).join('') : `<div class="empty" style="grid-column:1/-1">Cadastre disciplinas ou clique em “Preencher disciplinas do 5º período”.</div>`;
+    }
+    function topicHTML(subjectId,t){return `<div class="topic-row"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTopic('${subjectId}','${t.id}')"><div><b>${escapeHtml(t.name)}</b><br><span class="badge ${HEAT[t.heat]||'yellow'}">${escapeHtml(t.heat||'Ocasional')}</span> <span class="badge gray">${escapeHtml(t.roi||'Médio')} retorno</span></div><button class="btn small soft" onclick="deleteTopic('${subjectId}','${t.id}')">✕</button></div>`;}
+    function deleteSubject(id){ if(confirm('Excluir disciplina e assuntos?')){state.subjects=state.subjects.filter(s=>s.id!==id); save(); renderAll();} }
+    function openTopicModal(){ if(!state.subjects.length) return toast('Cadastre uma disciplina primeiro.'); renderDatalist(); $('#topicModal').classList.add('open'); }
+    function closeTopicModal(){ $('#topicModal').classList.remove('open'); }
+    function addTopic(e){ e.preventDefault();
+      const sid=$('#topicSubject').value; const name=$('#topicName').value.trim(); if(!sid||!name) return toast('Informe disciplina e assunto.');
+      const s=state.subjects.find(x=>x.id===sid); s.topics=s.topics||[]; s.topics.push({id:uid(),name,heat:$('#topicHeat').value,difficulty:$('#topicDifficulty').value,roi:$('#topicROI').value,done:false,created:todayISO()});
+      $('#topicName').value=''; save(); renderAll(); toast('Assunto adicionado.');
+    }
+    function toggleTopic(sid,tid){ const s=state.subjects.find(x=>x.id===sid); const t=s?.topics?.find(x=>x.id===tid); if(t){t.done=!t.done; if(t.done) award(XP.topic); else {save(); renderAll();}} }
+    function deleteTopic(sid,tid){ const s=state.subjects.find(x=>x.id===sid); if(s){s.topics=s.topics.filter(t=>t.id!==tid); save(); renderAll();} }
+
+    function addReview(e){ e.preventDefault();
+      const subject=$('#reviewSubject').value.trim(); const topic=$('#reviewTopic').value.trim(); const date=$('#reviewDate').value; if(!subject||!topic||!date) return toast('Informe disciplina, assunto e data.');
+      const review={id:uid(),subject,topic,baseDate:date,priority:$('#reviewPriority').value,kind:$('#reviewKind').value,items:REVIEW_STEPS.map(step=>({id:uid(),label:step.label,date:addDays(date,step.days),done:false,xp:step.xp}))};
+      state.reviews.push(review); award(10); $('#reviewTopic').value=''; save(); renderAll(); toast('Revisões geradas automaticamente.');
+    }
+    function generateFromTopics(){
+      let count=0;
+      state.subjects.forEach(s=>(s.topics||[]).filter(t=>t.done).forEach(t=>{
+        const exists=state.reviews.some(r=>normalize(r.subject)===normalize(s.name)&&normalize(r.topic)===normalize(t.name));
+        if(!exists){ state.reviews.push({id:uid(),subject:s.name,topic:t.name,baseDate:t.created||todayISO(),priority:t.heat==='Muito cobrado'?'Alta':'Média',kind:'Teoria',items:REVIEW_STEPS.map(step=>({id:uid(),label:step.label,date:addDays(t.created||todayISO(),step.days),done:false,xp:step.xp}))}); count++; }
+      }));
+      save(); renderAll(); toast(`${count} revisões criadas a partir dos assuntos concluídos.`);
+    }
+    function renderReviews(){
+      const filter=normalize($('#reviewFilter')?.value||''); const status=$('#reviewStatus')?.value||'all'; const t=todayISO();
+      let rows=[]; state.reviews.forEach(r=>(r.items||[]).forEach(it=>rows.push({...it,parent:r})));
+      rows=rows.filter(it=>{
+        const text=normalize(`${it.parent.subject} ${it.parent.topic} ${it.date} ${it.label}`);
+        const okText=!filter||text.includes(filter); const okStatus=status==='all'||(status==='today'&&it.date===t&&!it.done)||(status==='overdue'&&it.date<t&&!it.done)||(status==='pending'&&!it.done)||(status==='done'&&it.done);
+        return okText&&okStatus;
+      }).sort((a,b)=>a.date.localeCompare(b.date));
+      $('#reviewTable').innerHTML = `<thead><tr><th>Status</th><th>Data</th><th>Rev.</th><th>Disciplina</th><th>Assunto</th><th>Prioridade</th><th>Ações</th></tr></thead><tbody>${rows.map(it=>{
+        const cls=it.done?'green':it.date<t?'red':it.date===t?'orange':'blue'; const label=it.done?'Concluída':it.date<t?'Atrasada':it.date===t?'Hoje':'Programada';
+        return `<tr><td><span class="badge ${cls}">${label}</span></td><td>${fmtDate(it.date)}</td><td><b>${it.label}</b></td><td>${escapeHtml(it.parent.subject)}</td><td>${escapeHtml(it.parent.topic)}</td><td>${priorityBadge(it.parent.priority)}</td><td class="actions"><button class="btn small soft" onclick="completeReview('${it.parent.id}','${it.id}')">${it.done?'Desmarcar':'Check'}</button><button class="btn small ghost" onclick="deleteReviewGroup('${it.parent.id}')">Excluir grupo</button></td></tr>`;
+      }).join('') || `<tr><td colspan="7"><div class="empty">Nenhuma revisão encontrada.</div></td></tr>`}</tbody>`;
+    }
+    function priorityBadge(p){ const c=p==='Alta'?'red':p==='Média'?'orange':'green'; return `<span class="badge ${c}">${escapeHtml(p||'Média')}</span>`; }
+    function completeReview(rid,iid){ const r=state.reviews.find(x=>x.id===rid); const it=r?.items?.find(x=>x.id===iid); if(it){ it.done=!it.done; if(it.done) state.xp=(state.xp||0)+(it.xp||20); save(); renderAll(); } }
+    function deleteReviewGroup(id){ if(confirm('Excluir este grupo de revisões?')){state.reviews=state.reviews.filter(r=>r.id!==id); save(); renderAll();} }
+
+    function addQuestionSession(e){ e.preventDefault();
+      const subject=$('#qSubject').value.trim(); const topic=$('#qTopic').value.trim(); const total=Number($('#qTotal').value||0); const correct=Number($('#qCorrect').value||0); const date=$('#qDate').value||todayISO();
+      if(!subject||!topic||!total) return toast('Informe disciplina, assunto e total.'); if(correct>total) return toast('Acertos não podem passar do total.');
+      state.questions.push({id:uid(),subject,topic,total,correct,date}); award(XP.question); save(); renderAll(); toast('Sessão registrada.');
+    }
+    function renderQuestions(){
+      const filter=normalize($('#questionFilter')?.value||''); let rows=[...state.questions];
+      if(filter) rows=rows.filter(q=>normalize(`${q.subject} ${q.topic} ${q.date}`).includes(filter));
+      const perf=aggregateQuestions(); let perfArr=Object.values(perf).sort((a,b)=>a.rate-b.rate);
+      if(reviewOnlyWeakness) perfArr=perfArr.filter(x=>x.rate<70);
+      $('#questionBars').innerHTML = perfArr.length ? perfArr.slice(0,12).map(x=>`<div class="bar-item"><div class="bar-head"><span>${escapeHtml(x.topic)} <span class="muted">· ${escapeHtml(x.subject)}</span></span><span>${x.rate}%</span></div><div class="progress"><span style="width:${x.rate}%"></span></div><small class="muted">${x.correct}/${x.total} acertos</small></div>`).join('') : '<div class="empty">Registre sessões de questões.</div>';
+      $('#questionTable').innerHTML = `<thead><tr><th>Data</th><th>Disciplina</th><th>Assunto</th><th>Resultado</th><th>%</th><th>Ações</th></tr></thead><tbody>${rows.sort((a,b)=>b.date.localeCompare(a.date)).map(q=>{ const rate=Math.round(q.correct/q.total*100); return `<tr><td>${fmtDate(q.date)}</td><td>${escapeHtml(q.subject)}</td><td>${escapeHtml(q.topic)}</td><td>${q.correct}/${q.total}</td><td><span class="badge ${rate>=80?'green':rate>=60?'yellow':'red'}">${rate}%</span></td><td><button class="btn small soft" onclick="deleteQuestion('${q.id}')">Excluir</button></td></tr>`;}).join('') || `<tr><td colspan="6"><div class="empty">Nenhuma sessão registrada.</div></td></tr>`}</tbody>`;
+    }
+    function aggregateQuestions(){
+      const map={}; state.questions.forEach(q=>{ const k=normalize(q.subject+'|'+q.topic); if(!map[k]) map[k]={subject:q.subject,topic:q.topic,total:0,correct:0,rate:0}; map[k].total+=q.total; map[k].correct+=q.correct; map[k].rate=Math.round(map[k].correct/map[k].total*100); }); return map;
+    }
+    function getWeakTopics(){ return Object.values(aggregateQuestions()).filter(x=>x.rate<70).sort((a,b)=>a.rate-b.rate); }
+    function deleteQuestion(id){ state.questions=state.questions.filter(q=>q.id!==id); save(); renderAll(); }
+
+    function renderCampaign(){
+      $('#campaignArea').innerHTML = state.subjects.length ? state.subjects.map(s=>{
+        const topics=s.topics||[]; const pct=topics.length?Math.round(topics.filter(t=>t.done).length/topics.length*100):0;
+        return `<div class="world"><div class="world-head"><div><h3>${escapeHtml(s.name)}</h3><div class="progress" style="width:min(420px,100%)"><span style="width:${pct}%"></span></div></div><span class="badge purple">${pct}%</span></div><div class="nodes">${topics.map(t=>`<div class="node ${t.done?'done':''} ${t.heat==='Muito cobrado'?'hot':''}"><span class="icon">${t.done?'✅':t.heat==='Muito cobrado'?'🔥':'📍'}</span><b>${escapeHtml(t.name)}</b><small>${escapeHtml(t.heat||'Ocasional')} · ${escapeHtml(t.difficulty||'Médio')}</small><br><button class="btn small soft" onclick="toggleTopic('${s.id}','${t.id}')">${t.done?'Reabrir':'Concluir'}</button></div>`).join('')}<div class="node boss"><span class="icon">👹</span><b>Chefe: Prova</b><small>Simulado + revisão de erros</small></div></div></div>`;
+      }).join('') : '<div class="empty">Preencha disciplinas e assuntos para criar o mapa.</div>';
+    }
+
+    function activatePreExam(e){ e.preventDefault();
+      const subject=$('#examSubject').value.trim()||'Prova'; const date=$('#examDate').value; const hours=Number($('#examHours').value||4); const strategy=$('#examStrategy').value;
+      const daysLeft=date?Math.max(1,diffDays(date)*-1):7;
+      let split = strategy.includes('3 dias') ? [10,70,20] : strategy.includes('14') ? [25,55,20] : [10,70,20];
+      const totalHours = daysLeft*hours; const theory=Math.round(totalHours*split[0]/100); const q=Math.round(totalHours*split[1]/100); const rev=Math.max(1,totalHours-theory-q);
+      const weak = getWeakTopics().filter(w=>!subject||normalize(w.subject).includes(normalize(subject))).slice(0,4);
+      const hot = state.subjects.find(s=>normalize(s.name).includes(normalize(subject)))?.topics?.filter(t=>t.heat==='Muito cobrado'&&!t.done).slice(0,5)||[];
+      $('#preExamPlan').innerHTML = `
+        <div class="rec"><strong>${subject}: ${daysLeft} dia(s) até a prova</strong><small>Total estimado: ${totalHours}h · Teoria ${theory}h · Questões ${q}h · Revisão ${rev}h</small></div>
+        <div class="grid three">
+          <div class="card compact no-shadow"><h3>1) Questões</h3><p>Faça blocos cronometrados. Corrija erros imediatamente. Meta: ${Math.max(20,Math.round(q*10))} questões.</p></div>
+          <div class="card compact no-shadow"><h3>2) Revisão</h3><p>Priorize revisões atrasadas e mapas-resumo. Nada de teoria longa sem questão.</p></div>
+          <div class="card compact no-shadow"><h3>3) Teoria cirúrgica</h3><p>Use teoria só para lacunas dos erros e assuntos muito cobrados ainda não concluídos.</p></div>
+        </div>
+        <div class="rec"><strong>Pontos fracos detectados</strong><small>${weak.length?weak.map(w=>`${w.topic} (${w.rate}%)`).join(' · '):'Nenhum ponto fraco registrado no banco de questões.'}</small></div>
+        <div class="rec"><strong>Assuntos quentes ainda abertos</strong><small>${hot.length?hot.map(t=>t.name).join(' · '):'Nenhum assunto quente aberto encontrado.'}</small></div>`;
+      toast('Modo pré-prova gerado.');
+    }
+
+    function addTask(e){ e.preventDefault();
+      const title=$('#taskTitle').value.trim(); if(!title) return toast('Informe a tarefa.');
+      state.tasks.push({id:uid(),title,subject:$('#taskSubject').value.trim(),date:$('#taskDate').value||todayISO(),kind:$('#taskKind').value,xp:Number($('#taskXP').value||20),done:false});
+      $('#taskTitle').value=''; save(); renderAll(); toast('Tarefa adicionada.');
+    }
+    function renderTasks(){
+      const f=$('#taskFilter')?.value||'all'; const t=todayISO(); let rows=[...state.tasks];
+      rows=rows.filter(x=>f==='all'||(f==='today'&&x.date===t)||(f==='pending'&&!x.done)||(f==='done'&&x.done));
+      $('#taskList').innerHTML = rows.sort((a,b)=>a.date.localeCompare(b.date)).map(task=>`<div class="task ${task.done?'done':''}"><input type="checkbox" ${task.done?'checked':''} onchange="toggleTask('${task.id}')"><div><div class="task-title">${escapeHtml(task.title)}</div><span class="muted">${fmtDate(task.date)} · ${escapeHtml(task.subject||'Geral')} · ${escapeHtml(task.kind)} · ${task.xp} XP</span></div><button class="btn small soft" onclick="deleteTask('${task.id}')">Excluir</button></div>`).join('') || '<div class="empty">Nenhuma tarefa.</div>';
+    }
+    function toggleTask(id){ const t=state.tasks.find(x=>x.id===id); if(t){t.done=!t.done; if(t.done) state.xp=(state.xp||0)+(t.xp||20); save(); renderAll();} }
+    function deleteTask(id){ state.tasks=state.tasks.filter(t=>t.id!==id); save(); renderAll(); }
+
+    function saveConfig(e){ e.preventDefault(); state.config={startDate:$('#startDate').value||todayISO(), weeklyGoal:Number($('#weeklyGoal').value||34), dailyQuestionsGoal:Number($('#dailyQuestionsGoal').value||30), cycleName:$('#cycleName').value.trim()||'5º período'}; save(); renderAll(); toast('Configurações salvas.'); }
+    function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='medcid-planner-backup.json'; a.click(); URL.revokeObjectURL(a.href); }
+    function importData(e){ const file=e.target.files[0]; if(!file) return; const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(reader.result); state={...loadState(),...data}; save(); renderAll(); toast('Backup importado.'); }catch(err){toast('Arquivo inválido.');} }; reader.readAsText(file); }
+
+    function escapeHtml(str){ return String(str??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+    window.completeReview=completeReview; window.deleteReviewGroup=deleteReviewGroup; window.deleteSchedule=deleteSchedule; window.deleteSubject=deleteSubject; window.toggleTopic=toggleTopic; window.deleteTopic=deleteTopic; window.deleteQuestion=deleteQuestion; window.toggleTask=toggleTask; window.deleteTask=deleteTask;
+    init();
+  </script>
+</body>
+</html>

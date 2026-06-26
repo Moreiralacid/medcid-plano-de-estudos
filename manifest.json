@@ -1,0 +1,31 @@
+{
+  "name": "MEDCID Planner — Plano de Estudos Inteligente",
+  "short_name": "MEDCID",
+  "description": "Planner de estudos com horário semanal, revisões espaçadas, checklists, questões, XP e modo pré-prova.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070a13",
+  "theme_color": "#6d28d9",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "education",
+    "productivity",
+    "medical"
+  ]
+}
