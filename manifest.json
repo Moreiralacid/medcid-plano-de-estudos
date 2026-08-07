@@ -1,11 +1,11 @@
 {
-  "name": "MEDCID Planner — Plano de Estudos Inteligente",
+  "name": "MEDCID — Plataforma Inteligente de Estudos",
   "short_name": "MEDCID",
-  "description": "Planner de estudos com horário semanal, revisões espaçadas, checklists, questões, XP e modo pré-prova.",
+  "description": "Biblioteca de prompts adaptada pelo Flowing, flashcards próprios, hábitos, planejamento e revisões espaçadas.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#070a13",
   "theme_color": "#6d28d9",
   "lang": "pt-BR",
@@ -27,5 +27,30 @@
     "education",
     "productivity",
     "medical"
+  ],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "fullscreen"
+  ],
+  "shortcuts": [
+    {
+      "name": "Revisões de hoje",
+      "short_name": "Revisões",
+      "url": "./index.html#/revisoes",
+      "description": "Abrir a aba de revisões"
+    },
+    {
+      "name": "Horário semanal",
+      "short_name": "Horário",
+      "url": "./index.html#/horario",
+      "description": "Abrir a grade de horários"
+    },
+    {
+      "name": "Biblioteca de prompts",
+      "short_name": "Prompts",
+      "url": "./index.html#/professor",
+      "description": "Adaptar e usar modelos de estudo em uma IA externa"
+    }
   ]
 }
