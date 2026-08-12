@@ -18,6 +18,21 @@ Este diretório já está no formato ideal para GitHub Pages: não exige build, 
 
 O site ficará disponível no endereço padrão `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/`.
 
+## Pareto Recursivo
+
+O módulo `pareto-recursivo/` transforma um edital em um plano de estudos em três camadas:
+
+- Camada 1: disciplinas prioritárias, complementares e residuais;
+- Camada 2: tópicos quentes, mornos e frios;
+- Camada 3: subtópicos priorizados por frequência, dificuldade e custo-benefício;
+- cronograma por subtópico com blocos de 30% teoria, 50% questões e 20% revisão;
+- régua de corte explícita;
+- alertas gerais de banca;
+- marcação `[VERIFICAR]` quando não há frequência histórica validada;
+- persistência local, importação/exportação JSON e impressão em PDF.
+
+Acesso direto no GitHub Pages: `https://moreiralacid.github.io/medcid-plano-de-estudos/pareto-recursivo/`
+
 ## Biblioteca de prompts
 
 Inclui, de fábrica:
