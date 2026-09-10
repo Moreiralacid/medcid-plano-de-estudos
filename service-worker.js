@@ -1,7 +1,8 @@
-const CACHE_NAME = 'medcid-learning-os-v8';
+const CACHE_NAME = 'medcid-learning-os-v9';
 const ASSETS = [
   './',
   './index.html',
+  './app-base-v4.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
