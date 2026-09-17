@@ -1,0 +1,10 @@
+{
+  "name":"MEDCID Urologia — AP1 | UEA",
+  "short_name":"MEDCID Uro",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#07111f",
+  "theme_color":"#07111f",
+  "description":"Hub de estudos da AP1 de Urologia — UEA/ESA."
+}
