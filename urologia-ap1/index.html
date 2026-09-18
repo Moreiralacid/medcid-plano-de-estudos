@@ -1,80 +1,364 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07111f">
+<meta name="theme-color" content="#6d28d9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MEDCID Uro">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>MEDCID Urologia — AP1 | UEA</title>
 <style>
-:root{--bg:#07111f;--p:#0d1b2a;--p2:#10263a;--line:#1e3a55;--t:#eef7ff;--m:#93a9bc;--c:#45c8ff;--g:#45d6a0;--a:#ffc36e;--r:#ff7481}
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:radial-gradient(circle at 10% -10%,#123452 0,transparent 38%),var(--bg);color:var(--t);min-height:100vh}a{color:inherit}button,input,textarea{font:inherit}
-header{position:sticky;top:0;z-index:20;background:rgba(7,17,31,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
-.head{max-width:1000px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:flex;gap:10px;align-items:center}.logo{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--c),#557cff);display:grid;place-items:center;color:#01111e;font-weight:900}.brand b{display:block}.brand span{font-size:11px;color:var(--m)}
-main{max-width:1000px;margin:auto;padding:18px 14px calc(88px + env(safe-area-inset-bottom))}
-.hero,.card{background:var(--p);border:1px solid var(--line);border-radius:18px}.hero{padding:20px;background:linear-gradient(135deg,rgba(69,200,255,.12),rgba(69,214,160,.05)),var(--p)}h1{font-size:26px;margin:8px 0}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:0 0 10px}p{color:var(--m);line-height:1.5}.badge{display:inline-flex;padding:6px 9px;border:1px solid rgba(69,200,255,.35);border-radius:999px;color:var(--c);font-size:11px;font-weight:800}
-.progress{height:10px;background:var(--p2);border-radius:999px;overflow:hidden;margin:14px 0}.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--c),var(--g));width:0}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.stat{background:var(--p2);border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:10px;color:var(--m)}
-.section{margin-top:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:15px}.code{font-size:10px;color:var(--c);font-weight:900;letter-spacing:.08em}.title{font-weight:800;margin:4px 0 8px}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{font-size:10px;border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--m)}.btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid var(--line);background:var(--p2);color:var(--t);border-radius:10px;padding:9px 11px;text-decoration:none;font-size:12px;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--c),#4b89ff);border:0;color:#01111e;font-weight:900}.btn.good{color:var(--g);border-color:rgba(69,214,160,.35)}.btn.warn{color:var(--a);border-color:rgba(255,195,110,.35)}
-.pareto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.pareto div{background:var(--p2);border-radius:10px;padding:9px;color:var(--m);font-size:12px}.note{width:100%;min-height:120px;background:var(--p2);border:1px solid var(--line);border-radius:10px;color:var(--t);padding:10px}.check{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}.check:last-child{border-bottom:0}.callout{border:1px solid rgba(255,195,110,.3);background:rgba(255,195,110,.08);color:var(--a);padding:11px;border-radius:11px;font-size:12px}.search{width:100%;background:var(--p);border:1px solid var(--line);border-radius:11px;padding:11px;color:var(--t);margin-bottom:10px}.material{display:flex;justify-content:space-between;gap:10px;align-items:center}.material small{color:var(--m)}
-nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(13,27,42,.97);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);display:grid;grid-template-columns:repeat(5,1fr)}nav button{background:transparent;border:0;color:var(--m);padding:10px 4px 8px;font-size:10px}nav button.active{color:var(--c)}nav b{display:block;font-size:18px;margin-bottom:2px}.page{display:none}.page.active{display:block}.timer{font-size:46px;text-align:center;font-weight:900;letter-spacing:.05em}.video{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
-@media(max-width:650px){.grid,.pareto{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}h1{font-size:23px}}
+:root{
+  --bg:#f6f7fb;--surface:#fff;--surface2:#eef2ff;--text:#141827;--muted:#667085;--line:#d9ddeb;
+  --primary:#6d28d9;--primary2:#8b5cf6;--accent:#06b6d4;--good:#16a34a;--warn:#f59e0b;--bad:#dc2626;--info:#2563eb;
+  --shadow:0 18px 50px rgba(20,24,39,.10);--radius:22px
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,rgba(139,92,246,.16),transparent 34%),radial-gradient(circle at 80% 0,rgba(6,182,212,.12),transparent 30%),var(--bg);color:var(--text);min-height:100vh}
+body.dark{--bg:#070a13;--surface:#101626;--surface2:#151e33;--text:#f8fafc;--muted:#aab5c8;--line:#27324a;--shadow:0 24px 70px rgba(0,0,0,.44);background:radial-gradient(circle at top left,rgba(109,40,217,.35),transparent 34%),radial-gradient(circle at 80% 0,rgba(6,182,212,.20),transparent 30%),var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;min-height:44px}:focus-visible{outline:3px solid var(--accent);outline-offset:3px}a{text-decoration:none;color:inherit}
+.app{max-width:1440px;margin:0 auto;padding:22px}
+.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:linear-gradient(135deg,rgba(109,40,217,.96),rgba(6,182,212,.88));color:#fff;border-radius:30px;padding:26px;box-shadow:var(--shadow)}
+.hero:before{content:"";position:absolute;right:-70px;top:-85px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.14)}.hero h1{margin:4px 0 8px;font-size:clamp(2rem,5vw,4.2rem);line-height:.95;letter-spacing:-.05em}.hero p{max-width:850px;margin:0;color:rgba(255,255,255,.88)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;text-transform:uppercase;font-size:.76rem;font-weight:900;letter-spacing:.15em;color:#dbeafe}.hero-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end;z-index:1}
+.btn{border:0;border-radius:999px;padding:11px 15px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;font-weight:800;box-shadow:0 10px 25px rgba(109,40,217,.22);display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn:hover{filter:brightness(1.04);transform:translateY(-1px)}.btn.secondary{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);box-shadow:none}.btn.soft{background:var(--surface2);color:var(--text);border:1px solid var(--line);box-shadow:none}.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);box-shadow:none}.btn.danger{background:linear-gradient(135deg,#dc2626,#f97316)}.btn.small{padding:9px 11px;font-size:.83rem;min-height:42px}.btn.full{width:100%}
+.shell{display:grid;grid-template-columns:260px 1fr;gap:18px;margin-top:18px;align-items:start}.sidebar{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto;background:rgba(255,255,255,.72);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.55);border-radius:26px;padding:14px;box-shadow:var(--shadow)}body.dark .sidebar{background:rgba(16,22,38,.76);border-color:rgba(255,255,255,.07)}
+.sidebar-brand{display:flex;gap:10px;align-items:center;padding:6px 6px 12px}.brand-mark{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;font-weight:1000}.sidebar-brand strong,.sidebar-brand small{display:block}.sidebar-brand small{color:var(--muted);font-size:.72rem}.nav-label{padding:13px 9px 6px;color:var(--muted);font-size:.64rem;font-weight:1000;text-transform:uppercase;letter-spacing:.11em}
+.tab{width:100%;border:0;background:transparent;color:var(--muted);display:flex;gap:10px;align-items:center;text-align:left;border-radius:16px;padding:12px;font-weight:800;margin-bottom:4px}.tab.active{background:linear-gradient(135deg,rgba(109,40,217,.16),rgba(6,182,212,.12));color:var(--text)}.ico{width:27px;height:27px;display:grid;place-items:center;border-radius:9px;background:var(--surface2);border:1px solid var(--line);color:var(--primary);font-weight:1000}
+.quick-stats{display:grid;gap:8px;margin-top:14px}.pill-stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px}.pill-stat strong{display:block;font-size:1.35rem}.pill-stat span{font-size:.76rem;color:var(--muted);font-weight:800}
+main{min-width:0}.panel{display:none}.panel.active{display:block;animation:fade .2s ease}@keyframes fade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.section-head h2{margin:0 0 3px}.section-head p{margin:0}.section-title{font-size:1.35rem;letter-spacing:-.03em}
+.grid{display:grid;gap:16px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);min-width:0}body.dark .card{background:rgba(16,22,38,.88);border-color:rgba(255,255,255,.08)}.card.glow{background:linear-gradient(135deg,rgba(109,40,217,.12),rgba(6,182,212,.10)),var(--surface)}
+h2,h3{letter-spacing:-.03em}h2{font-size:1.35rem}h3{font-size:1.03rem}p{color:var(--muted);line-height:1.55}
+.action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.action-card{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:16px;text-align:left;box-shadow:var(--shadow);min-height:132px}.action-card strong{display:block;font-size:1.1rem;margin:8px 0 3px}.action-card span:last-child{color:var(--muted);font-size:.82rem}.action-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--surface2);color:var(--primary);font-weight:1000}
+.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}.metric-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}.metric-card strong{display:block;font-size:1.65rem}.metric-card span{font-size:.72rem;color:var(--muted);font-weight:900}
+.dashboard-main{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.stack{display:grid;gap:16px}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:.73rem;font-weight:900;border:1px solid var(--line);background:var(--surface2)}.badge.red{background:rgba(239,68,68,.12);color:#ef4444}.badge.orange{background:rgba(249,115,22,.12);color:#f97316}.badge.green{background:rgba(34,197,94,.13);color:#16a34a}.badge.blue{background:rgba(37,99,235,.13);color:#2563eb}.badge.purple{background:rgba(109,40,217,.13);color:#7c3aed}
+.progress{height:10px;background:var(--surface2);border-radius:999px;overflow:hidden;border:1px solid var(--line)}.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));width:0;transition:.25s}
+.subject-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.subject-card{position:relative;overflow:hidden}.subject-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--subject-color,var(--primary))}.subject-title{display:flex;justify-content:space-between;gap:10px}.topic-list{display:grid;gap:8px;margin-top:12px}.topic-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:8px}.topic-row input{width:auto}.topic-row b{font-size:.88rem}.topic-row small{color:var(--muted)}
+.form{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px;margin-bottom:14px}.field{display:grid;gap:4px}label{font-size:.8rem;color:var(--muted);font-weight:900;display:block;margin-bottom:5px}input,select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:12px;outline:none}textarea{min-height:95px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(109,40,217,.12)}
+.table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--line);background:var(--surface)}table{width:100%;border-collapse:collapse;min-width:740px}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:middle;font-size:.88rem}th{background:var(--surface2);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.review-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.review-chip{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:9px;text-align:center;font-size:.75rem;font-weight:900}.review-chip.done{background:rgba(22,163,74,.12);color:var(--good)}
+.temp{display:flex;gap:3px}.flame{font-size:.85rem}.muted{color:var(--muted)}.empty{text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:18px;padding:24px;background:var(--surface)}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.timeline .day{padding:13px;border:1px solid var(--line);border-radius:16px;background:var(--surface2);font-weight:900;text-align:center;font-size:.78rem}.day small{display:block;color:var(--muted);font-weight:700;margin-top:4px}
+.quest-card{border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:14px}.quest-row{display:grid;grid-template-columns:1fr 100px 100px auto;gap:8px;align-items:end}.accuracy{font-size:1.4rem;font-weight:1000}.bar-list{display:grid;gap:12px}.bar-item{display:grid;gap:6px}.bar-head{display:flex;justify-content:space-between;gap:10px;font-weight:900;font-size:.86rem}.bar-head span:last-child{color:var(--muted)}
+.error-card{border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--surface);margin-bottom:9px}.error-card header{display:flex;justify-content:space-between;gap:10px}.error-card small{color:var(--muted)}
+.resource{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:16px;background:var(--surface);margin-bottom:9px}.resource strong{display:block}.resource small{color:var(--muted)}
+.video{width:100%;aspect-ratio:16/9;border:0;border-radius:16px;background:#000}.video-card p{font-size:.85rem}
+.pareto{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.pareto div{border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px;font-size:.82rem}
+.callout{border-left:5px solid var(--warn);background:rgba(245,158,11,.10);border-radius:14px;padding:12px;color:var(--text);margin:8px 0}
+.xp-ring{width:150px;height:150px;border-radius:999px;background:conic-gradient(var(--primary) 0deg,var(--primary) var(--deg),var(--surface2) var(--deg),var(--surface2) 360deg);display:grid;place-items:center;margin:auto}.xp-ring>div{width:112px;height:112px;border-radius:999px;background:var(--surface);display:grid;place-items:center;text-align:center}.xp-ring strong{display:block;font-size:2rem}.xp-ring span{font-size:.72rem;color:var(--muted);font-weight:900}
+.prep-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.prep{border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:13px}.prep b{display:block;margin-bottom:7px}.prep label{display:flex;gap:7px;align-items:flex-start;font-weight:700;color:var(--text);margin:7px 0}.prep input{width:auto}
+.memory-map{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.map-node{border:1px solid var(--line);border-radius:18px;padding:14px;background:linear-gradient(135deg,rgba(109,40,217,.10),rgba(6,182,212,.08)),var(--surface)}.map-node strong{display:block;margin-bottom:5px}.map-node small{color:var(--muted)}
+.mobile-nav{display:none}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:16px;z-index:99}.modal.open{display:grid}.modal-card{width:min(720px,100%);max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow)}
+@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.dashboard-main{grid-template-columns:1fr}.prep-grid,.memory-map{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:820px){
+  .app{padding:12px 12px calc(84px + env(safe-area-inset-bottom))}.hero{grid-template-columns:1fr;padding:20px;border-radius:22px}.hero-actions{justify-content:flex-start}.shell{display:block}.sidebar{display:none}.action-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}.subject-grid,.two,.three,.four{grid-template-columns:1fr}.timeline{grid-template-columns:repeat(2,1fr)}.quest-row{grid-template-columns:1fr 1fr}.quest-row .wide{grid-column:1/-1}.review-grid{grid-template-columns:repeat(4,1fr)}.prep-grid,.memory-map{grid-template-columns:1fr}.pareto{grid-template-columns:1fr}
+  .mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:80;background:rgba(16,22,38,.96);border-top:1px solid rgba(255,255,255,.08);padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(18px)}.mobile-nav button{border:0;background:transparent;color:#aab5c8;padding:9px 2px 7px;font-size:.67rem}.mobile-nav button.active{color:#67e8f9}.mobile-nav b{display:block;font-size:1.1rem;margin-bottom:2px}
+}
 </style>
 </head>
 <body>
-<header><div class="head"><div class="brand"><div class="logo">MC</div><div><b>MEDCID Urologia</b><span>AP1 · UEA / ESA · 6º período</span></div></div><span class="badge">5/5 módulos</span></div></header>
+<div class="app">
+<header class="hero">
+  <div>
+    <div class="eyebrow">MEDCID LEARNING OS · UEA</div>
+    <h1>Urologia — AP1</h1>
+    <p>O mesmo sistema do 5º período: conteúdo por prova, Pareto, questões, cronograma lógico, revisões, banco de erros, mapas e modo pré-prova.</p>
+  </div>
+  <div class="hero-actions">
+    <button id="installBtn" class="btn secondary" style="display:none">＋ Instalar</button>
+    <button class="btn secondary" onclick="toggleDark()">◐ Tema</button>
+    <button class="btn secondary" onclick="exportData()">↓ Backup</button>
+    <label class="btn secondary" for="importFile">↑ Restaurar</label>
+    <input id="importFile" type="file" accept="application/json" hidden>
+  </div>
+</header>
+
+<div class="shell">
+<aside class="sidebar">
+  <div class="sidebar-brand"><div class="brand-mark">M</div><div><strong>MEDCID</strong><small>Study intelligence</small></div></div>
+  <nav>
+    <div class="nav-label">Aprender</div>
+    <button class="tab active" data-tab="dashboard"><span class="ico">▦</span>Dashboard</button>
+    <button class="tab" data-tab="ap1"><span class="ico">A1</span>AP1</button>
+    <button class="tab" data-tab="mapas"><span class="ico">◇</span>Imagens / Mapas</button>
+    <div class="nav-label">Treinar</div>
+    <button class="tab" data-tab="questoes"><span class="ico">?</span>Questões</button>
+    <button class="tab" data-tab="simulado"><span class="ico">◎</span>Simulado</button>
+    <button class="tab" data-tab="erros"><span class="ico">⊘</span>Banco de erros</button>
+    <div class="nav-label">Organizar</div>
+    <button class="tab" data-tab="cronograma"><span class="ico">◫</span>Cronograma</button>
+    <button class="tab" data-tab="revisoes"><span class="ico">↻</span>Revisões</button>
+    <button class="tab" data-tab="materiais"><span class="ico">▤</span>Materiais</button>
+    <div class="nav-label">Desempenho</div>
+    <button class="tab" data-tab="preprova"><span class="ico">△</span>Pré-prova</button>
+    <button class="tab" data-tab="progresso"><span class="ico">↗</span>Progresso</button>
+  </nav>
+  <div class="quick-stats">
+    <div class="pill-stat"><strong id="sideXP">0</strong><span>XP total</span></div>
+    <div class="pill-stat"><strong id="sideDue">0</strong><span>revisões pendentes</span></div>
+    <div class="pill-stat"><strong id="sideProgress">0%</strong><span>progresso AP1</span></div>
+  </div>
+</aside>
+
 <main>
-<section id="home" class="page active"><div id="homeContent"></div></section>
-<section id="mods" class="page"><div id="modsContent"></div></section>
-<section id="lib" class="page"><h2>Biblioteca</h2><input id="search" class="search" placeholder="Buscar material..." oninput="renderLib(this.value)"><div id="libContent"></div></section>
-<section id="review" class="page"><div id="reviewContent"></div></section>
-<section id="tools" class="page"><div id="toolsContent"></div></section>
+<section id="dashboard" class="panel active">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Visão de hoje</div><h2>Reta final da AP1 de Urologia</h2><p id="countdownText">Calculando...</p></div><span class="badge purple">AP1 · 29/09/2026</span></div>
+  <div class="action-grid">
+    <button class="action-card" onclick="jump('ap1')"><span class="action-icon">▶</span><strong>Estudar agora</strong><span>Abra o próximo módulo incompleto</span></button>
+    <button class="action-card" onclick="jump('revisoes')"><span class="action-icon">↻</span><strong>Revisar</strong><span>R1 · R3 · R7 · R30 por módulo</span></button>
+    <button class="action-card" onclick="jump('questoes')"><span class="action-icon">?</span><strong>Questões</strong><span>Treine pelo compilado da UEA</span></button>
+  </div>
+  <div class="metric-grid">
+    <div class="metric-card"><strong id="metricStudied">0/5</strong><span>Módulos estudados</span></div>
+    <div class="metric-card"><strong id="metricReviews">0</strong><span>Revisões feitas</span></div>
+    <div class="metric-card"><strong id="metricQuestions">0</strong><span>Questões registradas</span></div>
+    <div class="metric-card"><strong id="metricAccuracy">—</strong><span>Precisão</span></div>
+    <div class="metric-card"><strong id="metricErrors">0</strong><span>Erros abertos</span></div>
+    <div class="metric-card"><strong id="metricXP">0</strong><span>XP</span></div>
+  </div>
+  <div class="dashboard-main">
+    <div class="stack">
+      <article class="card"><div class="section-head"><div><h2>Progresso por módulo</h2><p>Domínio dos assuntos da AP1.</p></div><button class="btn small soft" onclick="jump('ap1')">Ver AP1</button></div><div id="dashModules" class="bar-list"></div></article>
+      <article class="card"><div class="section-head"><div><h2>Fila de revisão</h2><p>Priorize o que ainda não recebeu R1/R3/R7.</p></div></div><div id="dueList"></div></article>
+    </div>
+    <div class="stack">
+      <article class="card glow"><h2>Seu nível</h2><div id="xpRing" class="xp-ring" style="--deg:0deg"><div><div><strong id="xpText">0</strong><span>XP</span></div></div></div><p style="text-align:center"><b id="levelText">Nível 0</b></p></article>
+      <article class="card"><h2>Foco recomendado</h2><div id="focusBox"></div></article>
+      <article class="card"><h2>Fontes-base</h2><p>Plano de ensino → material UEA → módulo MEDCID → provas antigas → caderno de erros.</p><button class="btn small soft full" onclick="jump('materiais')">Abrir materiais</button></article>
+    </div>
+  </div>
+</section>
+
+<section id="ap1" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Conteúdo da prova</div><h2>AP1 — 5 módulos</h2><p>Organização em blocos, como nos sites de Cardiologia e Pneumologia do 5º período.</p></div><span class="badge green">Conteúdo fechado</span></div>
+  <div id="moduleGrid" class="subject-grid"></div>
+</section>
+
+<section id="mapas" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Memória visual</div><h2>Imagens / Mapas</h2><p>Mapas mentais e rotas de memorização rápida.</p></div></div>
+  <article class="card">
+    <h2>Palácio da Memória — M1 com mapa inspirado em Undertale</h2>
+    <div class="memory-map">
+      <div class="map-node"><strong>Ruins</strong><small>Entrada: visão geral do módulo</small></div>
+      <div class="map-node"><strong>Snowdin</strong><small>Rins: retroperitônio, hilo, vascularização</small></div>
+      <div class="map-node"><strong>Waterfall</strong><small>Ureter: 3 estreitamentos</small></div>
+      <div class="map-node"><strong>Hotland</strong><small>Bexiga, uretra e próstata</small></div>
+      <div class="map-node"><strong>CORE / New Home</strong><small>Embriologia urinária e genital</small></div>
+    </div>
+    <div class="callout">Frase de saída: Veia–Artéria–Pelve · JUP–Ilíacos–JUV · Metanefro · Broto coletor · Blastema néfron · Wolff masculino · Müller feminino.</div>
+  </article>
+  <div class="grid two" style="margin-top:16px">
+    <article class="card"><h3>Mapa de próstata</h3><div class="pareto"><div><b>HPB</b><br>Zona de transição</div><div><b>Câncer</b><br>Zona periférica</div></div></article>
+    <article class="card"><h3>Mapa de litíase</h3><div class="pareto"><div><b>Diagnóstico</b><br>TC sem contraste</div><div><b>Emergência</b><br>Sepse + obstrução = drenagem</div></div></article>
+  </div>
+</section>
+
+<section id="questoes" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Treino de prova</div><h2>Questões antigas</h2><p>O site não inventa questões: use o compilado real e registre seu desempenho por módulo.</p></div><a class="btn" target="_blank" href="https://drive.google.com/file/d/1s2vCg9nCq-hPp_xsJzLN0JZqMAvK3KZL/view?usp=drivesdk">Abrir compilado</a></div>
+  <div id="questionTracker" class="grid"></div>
+</section>
+
+<section id="simulado" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Modo prova</div><h2>Simulado guiado</h2><p>Use questões reais do compilado, com distribuição por assuntos da AP1.</p></div></div>
+  <div class="grid two">
+    <article class="card">
+      <h3>Simulado 20 questões</h3>
+      <p>Distribuição sugerida conforme recorrência histórica do banco:</p>
+      <div class="topic-list">
+        <div class="topic-row"><span>🔥</span><b>Litíase</b><small>5</small></div>
+        <div class="topic-row"><span>🔥</span><b>Câncer de próstata</b><small>5</small></div>
+        <div class="topic-row"><span>🔥</span><b>HPB</b><small>4</small></div>
+        <div class="topic-row"><span>🔥</span><b>ITU</b><small>4</small></div>
+        <div class="topic-row"><span>◈</span><b>Anatomia/Embriologia</b><small>2</small></div>
+      </div>
+      <div class="callout">Selecione as questões diretamente no PDF de provas antigas. O site apenas organiza o treino e registra o resultado.</div>
+    </article>
+    <article class="card">
+      <h3>Registrar resultado</h3>
+      <div class="form grid two">
+        <div class="field"><label>Questões</label><input id="simTotal" type="number" min="1" value="20"></div>
+        <div class="field"><label>Acertos</label><input id="simCorrect" type="number" min="0" value="0"></div>
+      </div>
+      <button class="btn" onclick="saveSimulation()">Salvar simulado</button>
+      <div id="simulationHistory" style="margin-top:12px"></div>
+    </article>
+  </div>
+</section>
+
+<section id="erros" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Recuperação</div><h2>Banco de erros</h2><p>Transforme cada erro em uma regra simples que você consegue recuperar depois.</p></div></div>
+  <article class="card">
+    <div class="form grid two">
+      <div class="field"><label>Módulo</label><select id="errModule"></select></div>
+      <div class="field"><label>Tipo</label><select id="errType"><option>Conceito</option><option>Conduta</option><option>Decoreba</option><option>Interpretação</option><option>Distração</option></select></div>
+      <div class="field" style="grid-column:1/-1"><label>Erro</label><textarea id="errText" placeholder="O que errei?"></textarea></div>
+      <div class="field" style="grid-column:1/-1"><label>Regra correta</label><textarea id="errFix" placeholder="Como vou lembrar na próxima vez?"></textarea></div>
+    </div>
+    <button class="btn" onclick="addError()">Adicionar erro</button>
+  </article>
+  <div id="errorList" style="margin-top:14px"></div>
+</section>
+
+<section id="cronograma" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Sequência lógica</div><h2>Cronograma sem engessar por datas</h2><p>Modelo “Dia 1… Dia antes da prova”, como no 5º período.</p></div></div>
+  <div class="timeline">
+    <div class="day">Dia 1<small>M1 Anatomia + questões</small></div>
+    <div class="day">Dia 2<small>M2 ITU + questões</small></div>
+    <div class="day">Dia 3<small>M3 HPB + questões</small></div>
+    <div class="day">Dia 4<small>M4 Câncer de próstata</small></div>
+    <div class="day">Dia 5<small>M5 Litíase + questões</small></div>
+    <div class="day">Véspera<small>Erros + revisão final</small></div>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <article class="card"><h3>Regra da sessão</h3><p><b>30% teoria → 50% questões → 20% revisão/erros.</b></p><p>Não releia tudo. Volte ao material principalmente onde você errou.</p></article>
+    <article class="card"><h3>Checklist diário</h3><div id="dailyChecklist"></div></article>
+  </div>
+</section>
+
+<section id="revisoes" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Espaçamento</div><h2>Revisões R1 · R3 · R7 · R30</h2><p>Marque somente quando você realmente recuperar o assunto sem depender do texto.</p></div></div>
+  <div id="reviewBoard"></div>
+</section>
+
+<section id="materiais" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Biblioteca</div><h2>Materiais e videoaulas</h2><p>Links centrais do Drive + vídeos verificados do Estratégia MED.</p></div></div>
+  <div class="grid two">
+    <article class="card"><h3>Drive / PDFs</h3><div id="resourceList"></div></article>
+    <article class="card"><h3>Videoaulas</h3><div class="grid">
+      <div class="video-card"><iframe class="video" src="https://www.youtube.com/embed/ironpLn_qwg" allowfullscreen></iframe><p>Urologia — Aula de Cirurgia do Curso Intensivo</p></div>
+      <div class="video-card"><iframe class="video" src="https://www.youtube.com/embed/FA63CMn-odE" allowfullscreen></iframe><p>Questões Comentadas de Urologia</p></div>
+      <div class="video-card"><iframe class="video" src="https://www.youtube.com/embed/Vtyyb8hY7b4" allowfullscreen></iframe><p>ITU — Super Revisão de Nefrologia</p></div>
+    </div></article>
+  </div>
+</section>
+
+<section id="preprova" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Modo véspera</div><h2>Revisão Final</h2><p>20 gatilhos de recuperação para revisar em poucos minutos.</p></div><button class="btn danger" onclick="resetVespera()">Limpar checks</button></div>
+  <div id="vesperaGrid" class="prep-grid"></div>
+</section>
+
+<section id="progresso" class="panel">
+  <div class="section-head"><div><div class="eyebrow" style="color:var(--primary)">Desempenho</div><h2>Progresso da AP1</h2><p>Consolida estudo, revisões, questões e erros.</p></div></div>
+  <div class="grid two">
+    <article class="card"><h3>Domínio por módulo</h3><div id="progressBars" class="bar-list"></div></article>
+    <article class="card"><h3>Resumo</h3><div id="progressSummary"></div></article>
+  </div>
+  <article class="card" style="margin-top:16px"><h3>Backup local</h3><p>Seu progresso fica no navegador do aparelho. Exporte um JSON antes de trocar de iPhone ou limpar o Safari.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="exportData()">Exportar</button><button class="btn danger" onclick="resetAll()">Resetar tudo</button></div></article>
+</section>
 </main>
-<nav>
-<button data-p="home" class="active" onclick="go('home')"><b>⌂</b>Início</button>
-<button data-p="mods" onclick="go('mods')"><b>▦</b>Módulos</button>
-<button data-p="lib" onclick="go('lib')"><b>▤</b>Materiais</button>
-<button data-p="review" onclick="go('review')"><b>✓</b>Véspera</button>
-<button data-p="tools" onclick="go('tools')"><b>◷</b>Estudo</button>
+</div>
+</div>
+
+<nav class="mobile-nav">
+<button data-mobile="dashboard" class="active" onclick="jump('dashboard')"><b>▦</b>Início</button>
+<button data-mobile="ap1" onclick="jump('ap1')"><b>A1</b>AP1</button>
+<button data-mobile="questoes" onclick="jump('questoes')"><b>?</b>Questões</button>
+<button data-mobile="revisoes" onclick="jump('revisoes')"><b>↻</b>Revisões</button>
+<button data-mobile="preprova" onclick="jump('preprova')"><b>△</b>Véspera</button>
 </nav>
+
 <script>
-var drive={
-folder:"https://drive.google.com/drive/folders/12KkMOGqDYk49y8NIvek20c1xoVXydicw",
-provas:"https://drive.google.com/file/d/1s2vCg9nCq-hPp_xsJzLN0JZqMAvK3KZL/view?usp=drivesdk",
-aulas:"https://drive.google.com/drive/folders/10pveusqsXEOqWb-i5_HHJQ--eaI9fcU-",
-academicos:"https://drive.google.com/file/d/1eqI2dm-Z5waXqaQit9tHbe_aMqB_rZXY/view?usp=drivesdk",
-hpb:"https://drive.google.com/file/d/1BgGbRS370VkL-KnmKezc7cO2oIDyHneV/view?usp=drivesdk",
-plano:"https://drive.google.com/file/d/1qtz_AKBFK1OzDC6FSEP-GiEhwJmxJOlg/view?usp=drivesdk",
-medcurso:"https://drive.google.com/file/d/1ASDoPbXbJS_Oo40bQn0APK70_D4xJ7D8/view?usp=drivesdk",
-geral:"https://drive.google.com/drive/folders/1g5_NcIBdm0sMX9cOG38d1iTFvQRikm6F?usp=share_link"
-};
+var AP1_DATE=new Date("2026-09-29T07:00:00-04:00");
 var modules=[
-{id:"m1",n:"M1",t:"Anatomia e Embriologia Urogenital",pri:"Alta",link:drive.academicos,p:["Hilo: veia → artéria → pelve","3 estreitamentos ureterais","Metanefro = rim definitivo","Broto ureteral = coletor","Blastema metanéfrico = néfron","Wolff × Müller","HPB = transição; câncer = periferia"],trap:["Não inverter a ordem do hilo.","Broto ureteral não forma néfrons.","Wolff masculino; Müller feminino."]},
-{id:"m2",n:"M2",t:"Infecção do Trato Urinário",pri:"Muito alta",link:drive.aulas,p:["E. coli","Cistite × pielonefrite","EAS + urocultura","Bacteriúria","ITU gestacional","Quando pedir imagem","Obstrução infectada = ATB + descompressão"],trap:["Obstrução infectada não se trata só com antibiótico.","Cistite e pielonefrite não têm a mesma apresentação."]},
-{id:"m3",n:"M3",t:"Hiperplasia Prostática Benigna",pri:"Muito alta",link:drive.hpb,p:["Zona de transição","DHT / 5α-redutase","LUTS: armazenamento × esvaziamento","IPSS","PSA sob 5-ARI","Alfa-bloqueadores","5-ARI","Retenção urinária","RTU / HoLEP"],trap:["Tamanho prostático não equivale à intensidade dos sintomas.","5-ARI reduz PSA."]},
-{id:"m4",n:"M4",t:"Câncer de Próstata",pri:"Muito alta",link:drive.academicos,p:["Zona periférica","PSA + toque","RM / PI-RADS","Biópsia","Gleason / ISUP","TNM","Vigilância ativa","Prostatectomia","DE + incontinência","ADT"],trap:["HPB = transição; câncer = periferia.","Separar resposta histórica da banca de conduta atual."]},
-{id:"m5",n:"M5",t:"Litíase Urinária / Cólica Renal",pri:"Muito alta",link:drive.medcurso,p:["Composição / radiopacidade","TC sem contraste","Cólica renal","Estruvita / coraliforme","AINE","Terapia expulsiva","LECO × URS/RIRS × PCNL","Sepse + obstrução = drenagem urgente","Prevenção"],trap:["Hidronefrose não significa infecção.","Sepse + obstrução exige descompressão."]}
+{id:"m1",code:"M1",title:"Anatomia e Embriologia Urogenital",temp:4,color:"#2563eb",topics:["Hilo renal: veia → artéria → pelve","Relações renais e retroperitônio","3 estreitamentos ureterais","Metanefro = rim definitivo","Broto ureteral = sistema coletor","Blastema metanéfrico = néfron","Wolff × Müller","HPB = transição; câncer = periferia"],traps:["Não inverter a ordem do hilo.","Broto ureteral não forma néfron.","Wolff = masculino; Müller = feminino."],material:"https://drive.google.com/file/d/1eqI2dm-Z5waXqaQit9tHbe_aMqB_rZXY/view?usp=drivesdk"},
+{id:"m2",code:"M2",title:"Infecção do Trato Urinário",temp:5,color:"#06b6d4",topics:["E. coli","Cistite × pielonefrite","EAS e urocultura","Bacteriúria","ITU gestacional","Quando pedir imagem","Obstrução infectada = ATB + descompressão","ITU recorrente"],traps:["Obstrução infectada não se trata só com antibiótico.","Não pedir imagem rotineiramente em toda cistite simples."],material:"https://drive.google.com/drive/folders/10pveusqsXEOqWb-i5_HHJQ--eaI9fcU-"},
+{id:"m3",code:"M3",title:"Hiperplasia Prostática Benigna",temp:5,color:"#22c55e",topics:["Zona de transição","DHT e 5-alfa-redutase","LUTS: armazenamento × esvaziamento","IPSS","PSA sob 5-ARI","Alfa-bloqueadores","5-ARI","Retenção urinária","RTU / HoLEP"],traps:["Tamanho prostático não equivale à intensidade dos LUTS.","5-ARI reduz PSA."],material:"https://drive.google.com/file/d/1BgGbRS370VkL-KnmKezc7cO2oIDyHneV/view?usp=drivesdk"},
+{id:"m4",code:"M4",title:"Câncer de Próstata",temp:5,color:"#f97316",topics:["Zona periférica","PSA e toque","RM multiparamétrica / PI-RADS","Biópsia","Gleason / ISUP","TNM","Vigilância ativa","Prostatectomia radical","Disfunção erétil + incontinência","ADT e doença metastática"],traps:["HPB = transição; câncer = periferia.","Separar gabarito histórico da banca de recomendação atual."],material:"https://drive.google.com/file/d/1eqI2dm-Z5waXqaQit9tHbe_aMqB_rZXY/view?usp=drivesdk"},
+{id:"m5",code:"M5",title:"Litíase Urinária / Cólica Renal",temp:5,color:"#ef4444",topics:["Composição / radiopacidade","TC sem contraste","Cólica renal","Estruvita / coraliforme","AINE","Terapia expulsiva","LECO × URS/RIRS × PCNL","Sepse + obstrução = descompressão urgente","Prevenção"],traps:["Hidronefrose não é sinônimo de infecção.","Sepse + obstrução exige drenagem urgente."],material:"https://drive.google.com/file/d/1ASDoPbXbJS_Oo40bQn0APK70_D4xJ7D8/view?usp=drivesdk"}
 ];
-var materials=[
-["Pasta Urologia — UEA","UEA",drive.folder],["Provas Uro COMPILADÃO até Med42","Provas",drive.provas],["Aulas — Urologia","UEA",drive.aulas],["Urologia-Acadêmicos.pdf","Complementar",drive.academicos],["HPB 2023 SBU SP.pdf","Módulo",drive.hpb],["Plano de Ensino UEA 2023.2","UEA",drive.plano],["MEDCURSO CIR 2 — Urologia","Complementar",drive.medcurso],["Drive geral do 6º período","UEA",drive.geral]
+var resources=[
+["Pasta Urologia — UEA","https://drive.google.com/drive/folders/12KkMOGqDYk49y8NIvek20c1xoVXydicw","UEA"],
+["Provas Uro COMPILADÃO até Med42","https://drive.google.com/file/d/1s2vCg9nCq-hPp_xsJzLN0JZqMAvK3KZL/view?usp=drivesdk","Provas"],
+["Aulas — Urologia","https://drive.google.com/drive/folders/10pveusqsXEOqWb-i5_HHJQ--eaI9fcU-","UEA"],
+["Urologia-Acadêmicos.pdf","https://drive.google.com/file/d/1eqI2dm-Z5waXqaQit9tHbe_aMqB_rZXY/view?usp=drivesdk","Base"],
+["HPB 2023 SBU SP.pdf","https://drive.google.com/file/d/1BgGbRS370VkL-KnmKezc7cO2oIDyHneV/view?usp=drivesdk","M3"],
+["Plano de Ensino UEA 2023.2","https://drive.google.com/file/d/1qtz_AKBFK1OzDC6FSEP-GiEhwJmxJOlg/view?usp=drivesdk","Plano"],
+["MEDCURSO — CIR 2 — Urologia","https://drive.google.com/file/d/1ASDoPbXbJS_Oo40bQn0APK70_D4xJ7D8/view?usp=drivesdk","Complementar"],
+["Drive geral do 6º período","https://drive.google.com/drive/folders/1g5_NcIBdm0sMX9cOG38d1iTFvQRikm6F?usp=share_link","6º período"]
 ];
-function get(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+var vespera=[
+["M1",["Hilo: veia → artéria → pelve","3 estreitamentos ureterais","Metanefro definitivo","Wolff × Müller"]],
+["M2",["E. coli","Cistite × pielonefrite","EAS/urocultura","Obstrução infectada = ATB + drenagem"]],
+["M3",["HPB = transição","DHT","LUTS / IPSS","Alfa-bloqueador × 5-ARI"]],
+["M4",["Câncer = periferia","PSA / toque","Gleason / ISUP","Prostatectomia: DE + incontinência"]],
+["M5",["TC sem contraste","Radiopacidade","Estruvita / coraliforme","Sepse + obstrução = drenagem"]]
+];
+function get(k,d){try{var v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}}
 function set(k,v){localStorage.setItem(k,JSON.stringify(v))}
-function arr(k){return get(k,[])}
-function toggle(k,id){var a=arr(k),i=a.indexOf(id);if(i>=0)a.splice(i,1);else a.push(id);set(k,a);renderAll()}
-function go(id){document.querySelectorAll(".page").forEach(function(x){x.classList.toggle("active",x.id===id)});document.querySelectorAll("nav button").forEach(function(x){x.classList.toggle("active",x.dataset.p===id)});window.scrollTo(0,0)}
-function card(m){var done=arr("uro.done").indexOf(m.id)>=0;return '<div class="card"><div class="code">'+m.n+'</div><div class="title">'+m.t+'</div><div class="chips"><span class="chip">Prioridade '+m.pri+'</span><span class="chip">'+(done?"Concluído":"Pronto")+'</span></div><p>'+m.p.slice(0,3).join(" · ")+'</p><div class="btns"><button class="btn primary" onclick="openModule(\''+m.id+'\')">Estudar</button><a class="btn" target="_blank" rel="noopener" href="'+m.link+'">Material</a><button class="btn '+(done?"good":"")+'" onclick="toggle(\'uro.done\',\''+m.id+'\')">'+(done?"✓ Estudado":"Marcar")+'</button></div></div>'}
-function renderHome(){var d=arr("uro.done").length,r=arr("uro.review").length,p=Math.round(d/5*100);document.getElementById("homeContent").innerHTML='<div class="hero"><span class="badge">AP1 COMPLETA EM CONTEÚDO</span><h1>Urologia AP1, organizada para revisão ativa.</h1><p>5 módulos, links da UEA, provas antigas, videoaulas verificadas e progresso salvo no iPhone.</p><div class="progress"><i style="width:'+p+'%"></i></div><div class="stats"><div class="stat"><b>'+d+'</b><span>estudados</span></div><div class="stat"><b>'+r+'</b><span>revisar</span></div><div class="stat"><b>'+p+'%</b><span>progresso</span></div></div><div class="btns"><button class="btn primary" onclick="go(\'mods\')">Começar</button><a class="btn" target="_blank" rel="noopener" href="'+drive.provas+'">Provas antigas</a></div></div><div class="section"><h2>Módulos</h2><div class="grid">'+modules.map(card).join("")+'</div></div><div class="section callout">No iPhone: abra este site no Safari → Compartilhar → Adicionar à Tela de Início. Assim ele funciona como um app.</div>'}
-function renderMods(){document.getElementById("modsContent").innerHTML='<h2>5 módulos da AP1</h2><div class="grid">'+modules.map(card).join("")+'</div><div id="moduleDetail" class="section"></div>'}
-function openModule(id){go("mods");var m=modules.filter(function(x){return x.id===id})[0];var note=get("uro.note."+id,"");document.getElementById("moduleDetail").innerHTML='<div class="card"><div class="code">'+m.n+'</div><h2>'+m.t+'</h2><div class="pareto">'+m.p.map(function(x){return "<div>• "+x+"</div>"}).join("")+'</div><div class="section"><h3>Pegadinhas</h3>'+m.trap.map(function(x){return "<div class=\'callout\' style=\'margin:7px 0\'>"+x+"</div>"}).join("")+'</div><div class="btns"><a class="btn primary" target="_blank" rel="noopener" href="'+m.link+'">Abrir material</a><button class="btn warn" onclick="toggle(\'uro.review\',\''+m.id+'\')">Revisar depois</button></div><div class="section"><h3>Notas</h3><textarea id="note-'+id+'" class="note" placeholder="Erros, dúvidas e frases de memorização...">'+note+'</textarea><div class="btns"><button class="btn primary" onclick="set(\'uro.note.'+id+'\',document.getElementById(\'note-'+id+'\').value)">Salvar nota</button></div></div><div class="section"><h3>Active recall</h3>'+m.p.slice(0,6).map(function(x,i){var k="uro.ck."+id+"."+i;return '<label class="check"><input type="checkbox" '+(get(k,false)?"checked":"")+' onchange="set(\''+k+'\',this.checked)"><span>Consigo explicar sem olhar: '+x+'</span></label>'}).join("")+'</div></div>';document.getElementById("moduleDetail").scrollIntoView({behavior:"smooth"})}
-function renderLib(q){q=(q||"").toLowerCase();var f=materials.filter(function(x){return (x[0]+" "+x[1]).toLowerCase().indexOf(q)>=0});document.getElementById("libContent").innerHTML=f.map(function(x){return '<div class="card material" style="margin:8px 0"><div><div class="code">'+x[1]+'</div><b>'+x[0]+'</b></div><a class="btn primary" target="_blank" rel="noopener" href="'+x[2]+'">Abrir</a></div>'}).join("")+'<div class="section"><h2>Videoaulas — Estratégia MED</h2><div class="grid"><div class="card"><iframe class="video" src="https://www.youtube.com/embed/ironpLn_qwg" allowfullscreen></iframe><p>Urologia — Aula de Cirurgia do Curso Intensivo</p></div><div class="card"><iframe class="video" src="https://www.youtube.com/embed/FA63CMn-odE" allowfullscreen></iframe><p>Questões Comentadas de Urologia</p></div><div class="card"><iframe class="video" src="https://www.youtube.com/embed/Vtyyb8hY7b4" allowfullscreen></iframe><p>Infecção do Trato Urinário — Super Revisão</p></div></div></div>'}
-var eve=[["M1",["Hilo: veia → artéria → pelve","3 estreitamentos ureterais","Metanefro definitivo","Wolff × Müller"]],["M2",["E. coli","Cistite × pielonefrite","Urocultura conforme contexto","Obstrução infectada = ATB + drenagem"]],["M3",["HPB = transição","DHT","LUTS / IPSS","Alfa-bloqueador × 5-ARI"]],["M4",["Câncer = periferia","PSA / toque","Gleason / ISUP","Prostatectomia: DE + incontinência"]],["M5",["TC sem contraste","Radiopacidade","Estruvita / coraliforme","Sepse + obstrução = drenagem"]]];
-function renderReview(){document.getElementById("reviewContent").innerHTML='<h2>Revisão de véspera</h2><div class="grid">'+eve.map(function(x){return '<div class="card"><div class="code">'+x[0]+'</div>'+x[1].map(function(y){return '<label class="check"><input type="checkbox"><span>'+y+'</span></label>'}).join("")+'</div>'}).join("")+'</div><div class="section"><a class="btn primary" target="_blank" rel="noopener" href="'+drive.provas+'">Abrir provas antigas</a></div>'}
-var sec=1500,t=null;function fmt(){return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0")}function tick(){var e=document.getElementById("timer");if(e)e.textContent=fmt()}function start(){if(t)return;t=setInterval(function(){sec--;tick();if(sec<=0){clearInterval(t);t=null;alert("Bloco concluído. Pausa de 5 minutos.");sec=300;tick()}},1000)}function reset(){clearInterval(t);t=null;sec=1500;tick()}
-function renderTools(){document.getElementById("toolsContent").innerHTML='<div class="grid"><div class="card"><h2>Pomodoro 25/5</h2><div id="timer" class="timer">'+fmt()+'</div><div class="btns" style="justify-content:center"><button class="btn primary" onclick="start()">Iniciar</button><button class="btn" onclick="reset()">Resetar</button></div></div><div class="card"><h2>Caderno de erros</h2><textarea id="errors" class="note" placeholder="Ex.: M5 — confundi ácido úrico com estruvita...">'+get("uro.errors","")+'</textarea><div class="btns"><button class="btn primary" onclick="set(\'uro.errors\',document.getElementById(\'errors\').value)">Salvar</button></div></div></div><div class="section card"><h3>Reset</h3><p>Apaga somente progresso, notas e checklists deste site no aparelho.</p><button class="btn warn" onclick="if(confirm(\'Resetar todo o progresso?\')){Object.keys(localStorage).filter(function(k){return k.indexOf(\'uro.\')===0}).forEach(function(k){localStorage.removeItem(k)});renderAll()}">Resetar progresso</button></div>'}
-function renderAll(){renderHome();renderMods();renderLib("");renderReview();renderTools()}renderAll();if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){})})}
+function has(k,id){return get(k,[]).indexOf(id)>=0}
+function toggleIn(k,id,xp){var a=get(k,[]),i=a.indexOf(id);if(i>=0)a.splice(i,1);else{a.push(id);if(xp)addXP(xp)}set(k,a);renderAll()}
+function addXP(n){set("uro5.xp",get("uro5.xp",0)+n)}
+function jump(id){document.querySelectorAll(".panel").forEach(function(p){p.classList.toggle("active",p.id===id)});document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("active",b.dataset.tab===id)});document.querySelectorAll(".mobile-nav button").forEach(function(b){b.classList.toggle("active",b.dataset.mobile===id)});window.scrollTo({top:0,behavior:"smooth"})}
+document.querySelectorAll(".tab").forEach(function(b){b.addEventListener("click",function(){jump(b.dataset.tab)})});
+function toggleDark(){document.body.classList.toggle("dark");set("uro5.dark",document.body.classList.contains("dark"))}
+if(get("uro5.dark",true))document.body.classList.add("dark");
+function pctModule(m){
+  var studied=has("uro5.studied",m.id)?35:0, revs=0;
+  ["r1","r3","r7","r30"].forEach(function(r){if(get("uro5.rev."+m.id+"."+r,false))revs+=10});
+  var q=get("uro5.q."+m.id,{total:0,correct:0});var qs=q.total>0?15:0;
+  var topicsDone=0;m.topics.forEach(function(_,i){if(get("uro5.topic."+m.id+"."+i,false))topicsDone++});
+  return Math.min(100,studied+revs+qs+Math.round((topicsDone/m.topics.length)*10));
+}
+function renderModules(){
+  document.getElementById("moduleGrid").innerHTML=modules.map(function(m){
+    var p=pctModule(m),stud=has("uro5.studied",m.id);
+    return '<article class="card subject-card" style="--subject-color:'+m.color+'"><div class="subject-title"><div><span class="badge blue">'+m.code+'</span><h3>'+m.title+'</h3></div><div class="temp">'+Array(m.temp).fill("🔥").join("")+'</div></div><div class="meter-line" style="display:flex;justify-content:space-between;font-size:.76rem;font-weight:900;color:var(--muted)"><span>Domínio</span><span>'+p+'%</span></div><div class="progress"><span style="width:'+p+'%"></span></div><div class="topic-list">'+m.topics.map(function(t,i){return '<label class="topic-row"><input type="checkbox" '+(get("uro5.topic."+m.id+"."+i,false)?"checked":"")+' onchange="set(\\'uro5.topic.'+m.id+'.'+i+'\\',this.checked);if(this.checked)addXP(2);renderAll()"><b>'+t+'</b><small>80/20</small></label>'}).join("")+'</div><div class="callout"><b>Pegadinhas:</b><br>'+m.traps.join("<br>")+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn small '+(stud?"soft":"")+'" onclick="toggleIn(\\'uro5.studied\\',\\''+m.id+'\\',20)">'+(stud?"✓ Estudado":"Marcar estudado")+'</button><a class="btn small ghost" target="_blank" href="'+m.material+'">Abrir material</a></div></article>'
+  }).join("");
+}
+function renderReviews(){
+  document.getElementById("reviewBoard").innerHTML=modules.map(function(m){
+    return '<article class="card" style="margin-bottom:12px"><div class="section-head"><div><span class="badge blue">'+m.code+'</span><h3>'+m.title+'</h3></div><span class="badge '+(pctModule(m)>=75?"green":"orange")+'">'+pctModule(m)+'%</span></div><div class="review-grid">'+["r1","r3","r7","r30"].map(function(r){var done=get("uro5.rev."+m.id+"."+r,false);return '<button class="review-chip '+(done?"done":"")+'" onclick="var k=\\'uro5.rev.'+m.id+'.'+r+'\\';var v=!get(k,false);set(k,v);if(v)addXP(5);renderAll()">'+r.toUpperCase()+(done?" ✓":"")+'</button>'}).join("")+'</div></article>'
+  }).join("");
+}
+function renderQuestions(){
+  document.getElementById("questionTracker").innerHTML=modules.map(function(m){
+    var q=get("uro5.q."+m.id,{total:0,correct:0}),acc=q.total?Math.round(q.correct/q.total*100):0;
+    return '<article class="quest-card"><div class="section-head"><div><span class="badge blue">'+m.code+'</span><h3>'+m.title+'</h3></div><span class="accuracy">'+(q.total?acc+"%":"—")+'</span></div><div class="quest-row"><div class="field wide"><label>Anotação rápida</label><input id="qnote-'+m.id+'" placeholder="Ex.: errei cálculo de estruvita"></div><div class="field"><label>Questões</label><input id="qt-'+m.id+'" type="number" min="0" value="0"></div><div class="field"><label>Acertos</label><input id="qc-'+m.id+'" type="number" min="0" value="0"></div><button class="btn small" onclick="addQuestions(\\''+m.id+'\\')">Somar</button></div><p><b>'+q.total+'</b> questões registradas · <b>'+q.correct+'</b> acertos.</p></article>'
+  }).join("");
+}
+function addQuestions(id){var t=parseInt(document.getElementById("qt-"+id).value||0),c=parseInt(document.getElementById("qc-"+id).value||0);if(t<1||c<0||c>t)return alert("Confira quantidade e acertos.");var q=get("uro5.q."+id,{total:0,correct:0});q.total+=t;q.correct+=c;set("uro5.q."+id,q);addXP(t);var note=document.getElementById("qnote-"+id).value.trim();if(note){var es=get("uro5.errors",[]);es.unshift({id:Date.now(),module:id,type:"Questão",text:note,fix:"Revisar no módulo e refazer questão.",resolved:false});set("uro5.errors",es)}renderAll()}
+function addError(){var text=document.getElementById("errText").value.trim(),fix=document.getElementById("errFix").value.trim();if(!text)return alert("Descreva o erro.");var es=get("uro5.errors",[]);es.unshift({id:Date.now(),module:document.getElementById("errModule").value,type:document.getElementById("errType").value,text:text,fix:fix,resolved:false});set("uro5.errors",es);addXP(3);document.getElementById("errText").value="";document.getElementById("errFix").value="";renderAll()}
+function resolveError(id){var es=get("uro5.errors",[]);es.forEach(function(e){if(e.id===id)e.resolved=!e.resolved});set("uro5.errors",es);renderAll()}
+function deleteError(id){set("uro5.errors",get("uro5.errors",[]).filter(function(e){return e.id!==id}));renderAll()}
+function renderErrors(){
+  var es=get("uro5.errors",[]);document.getElementById("errorList").innerHTML=es.length?es.map(function(e){var m=modules.find(function(x){return x.id===e.module});return '<article class="error-card" style="'+(e.resolved?"opacity:.6":"")+'"><header><div><span class="badge red">'+(m?m.code:"—")+' · '+e.type+'</span><h3>'+e.text+'</h3></div><span class="badge '+(e.resolved?"green":"orange")+'">'+(e.resolved?"Resolvido":"Aberto")+'</span></header><p><b>Regra correta:</b> '+(e.fix||"—")+'</p><div style="display:flex;gap:7px"><button class="btn small soft" onclick="resolveError('+e.id+')">'+(e.resolved?"Reabrir":"Resolver")+'</button><button class="btn small ghost" onclick="deleteError('+e.id+')">Excluir</button></div></article>'}).join(""):'<div class="empty">Nenhum erro registrado ainda.</div>'
+}
+function renderResources(){document.getElementById("resourceList").innerHTML=resources.map(function(r){return '<div class="resource"><div><span class="badge purple">'+r[2]+'</span><strong>'+r[0]+'</strong></div><a class="btn small soft" target="_blank" href="'+r[1]+'">Abrir</a></div>'}).join("")}
+function renderVespera(){
+  document.getElementById("vesperaGrid").innerHTML=vespera.map(function(g){return '<article class="prep"><b>'+g[0]+'</b>'+g[1].map(function(x,i){var k="uro5.ves."+g[0]+"."+i;return '<label><input type="checkbox" '+(get(k,false)?"checked":"")+' onchange="set(\\''+k+'\\',this.checked)"><span>'+x+'</span></label>'}).join("")+'</article>'}).join("")
+}
+function resetVespera(){Object.keys(localStorage).filter(function(k){return k.indexOf("uro5.ves.")===0}).forEach(function(k){localStorage.removeItem(k)});renderAll()}
+function renderDaily(){
+  var items=["Revisar 1 módulo sem olhar","Resolver questões antigas","Registrar pelo menos 1 erro útil","Fechar a sessão com 5 min de recall"];
+  document.getElementById("dailyChecklist").innerHTML=items.map(function(x,i){var k="uro5.daily."+new Date().toISOString().slice(0,10)+"."+i;return '<label class="topic-row"><input type="checkbox" '+(get(k,false)?"checked":"")+' onchange="set(\\''+k+'\\',this.checked);if(this.checked)addXP(3);renderAll()"><b>'+x+'</b><small>hoje</small></label>'}).join("")
+}
+function saveSimulation(){var t=parseInt(document.getElementById("simTotal").value||0),c=parseInt(document.getElementById("simCorrect").value||0);if(t<1||c<0||c>t)return alert("Confira os valores.");var a=get("uro5.sims",[]);a.unshift({id:Date.now(),total:t,correct:c,date:new Date().toLocaleDateString("pt-BR")});set("uro5.sims",a);addXP(t);renderAll()}
+function renderSims(){var a=get("uro5.sims",[]);document.getElementById("simulationHistory").innerHTML=a.length?a.slice(0,5).map(function(s){return '<div class="topic-row"><span>◎</span><b>'+s.correct+'/'+s.total+' · '+Math.round(s.correct/s.total*100)+'%</b><small>'+s.date+'</small></div>'}).join(""):'<div class="empty">Nenhum simulado registrado.</div>'}
+function renderDashboard(){
+  var studied=modules.filter(function(m){return has("uro5.studied",m.id)}).length;
+  var rev=0,qTot=0,qCor=0;modules.forEach(function(m){["r1","r3","r7","r30"].forEach(function(r){if(get("uro5.rev."+m.id+"."+r,false))rev++});var q=get("uro5.q."+m.id,{total:0,correct:0});qTot+=q.total;qCor+=q.correct});
+  var errs=get("uro5.errors",[]).filter(function(e){return !e.resolved}).length,xp=get("uro5.xp",0),overall=Math.round(modules.reduce(function(s,m){return s+pctModule(m)},0)/5);
+  document.getElementById("metricStudied").textContent=studied+"/5";document.getElementById("metricReviews").textContent=rev;document.getElementById("metricQuestions").textContent=qTot;document.getElementById("metricAccuracy").textContent=qTot?Math.round(qCor/qTot*100)+"%":"—";document.getElementById("metricErrors").textContent=errs;document.getElementById("metricXP").textContent=xp;
+  document.getElementById("sideXP").textContent=xp;document.getElementById("sideDue").textContent=20-rev;document.getElementById("sideProgress").textContent=overall+"%";document.getElementById("xpText").textContent=xp;document.getElementById("xpRing").style.setProperty("--deg",Math.min(360,(xp%100)*3.6)+"deg");document.getElementById("levelText").textContent="Nível "+Math.floor(xp/100);
+  document.getElementById("dashModules").innerHTML=modules.map(function(m){var p=pctModule(m);return '<div class="bar-item"><div class="bar-head"><span>'+m.code+' · '+m.title+'</span><span>'+p+'%</span></div><div class="progress"><span style="width:'+p+'%"></span></div></div>'}).join("");
+  var pending=[];modules.forEach(function(m){["r1","r3","r7"].forEach(function(r){if(!get("uro5.rev."+m.id+"."+r,false))pending.push(m.code+" · "+r.toUpperCase())})});document.getElementById("dueList").innerHTML=pending.length?pending.slice(0,8).map(function(x){return '<div class="topic-row"><span>↻</span><b>'+x+'</b><small>pendente</small></div>'}).join(""):'<div class="empty">R1/R3/R7 concluídas.</div>';
+  var sorted=modules.slice().sort(function(a,b){return pctModule(a)-pctModule(b)});var f=sorted[0];document.getElementById("focusBox").innerHTML='<span class="badge red">Mais fraco agora</span><h3>'+f.code+' · '+f.title+'</h3><p>Domínio estimado: <b>'+pctModule(f)+'%</b>. Faça uma recuperação ativa e questões antes de avançar.</p><button class="btn small soft full" onclick="jump(\\'ap1\\')">Abrir módulos</button>';
+  document.getElementById("progressBars").innerHTML=document.getElementById("dashModules").innerHTML;document.getElementById("progressSummary").innerHTML='<div class="metric-grid" style="grid-template-columns:repeat(2,1fr)"><div class="metric-card"><strong>'+overall+'%</strong><span>domínio global</span></div><div class="metric-card"><strong>'+qTot+'</strong><span>questões</span></div><div class="metric-card"><strong>'+rev+'/20</strong><span>revisões</span></div><div class="metric-card"><strong>'+errs+'</strong><span>erros abertos</span></div></div>';
+}
+function countdown(){var ms=AP1_DATE-new Date(),days=Math.ceil(ms/86400000);document.getElementById("countdownText").textContent=ms>0?("Faltam "+days+" dias para a AP1. Conteúdo novo já acabou: agora o ganho vem de questões, revisão e erros."):"A data cadastrada da AP1 já passou. Use o sistema para revisão e ajuste o calendário quando necessário."}
+function renderAll(){renderModules();renderReviews();renderQuestions();renderErrors();renderResources();renderVespera();renderDaily();renderSims();renderDashboard();countdown();document.getElementById("errModule").innerHTML=modules.map(function(m){return '<option value="'+m.id+'">'+m.code+' — '+m.title+'</option>'}).join("")}
+function exportData(){var obj={};Object.keys(localStorage).filter(function(k){return k.indexOf("uro5.")===0}).forEach(function(k){obj[k]=localStorage.getItem(k)});var blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="medcid-urologia-ap1-backup.json";a.click();URL.revokeObjectURL(url)}
+document.getElementById("importFile").addEventListener("change",function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var o=JSON.parse(r.result);Object.keys(o).forEach(function(k){if(k.indexOf("uro5.")===0)localStorage.setItem(k,o[k])});location.reload()}catch(err){alert("Backup inválido.")}};r.readAsText(f)});
+function resetAll(){if(confirm("Apagar todo o progresso local de Urologia?")){Object.keys(localStorage).filter(function(k){return k.indexOf("uro5.")===0}).forEach(function(k){localStorage.removeItem(k)});location.reload()}}
+var deferredPrompt=null;window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;document.getElementById("installBtn").style.display="inline-flex"});document.getElementById("installBtn").addEventListener("click",function(){if(deferredPrompt)deferredPrompt.prompt()});
+if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){})});
+renderAll();
 </script>
 </body>
 </html>
