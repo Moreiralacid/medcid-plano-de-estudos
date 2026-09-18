@@ -4,7 +4,7 @@
   "start_url":"./",
   "scope":"./",
   "display":"standalone",
-  "background_color":"#07111f",
-  "theme_color":"#07111f",
-  "description":"Hub de estudos da AP1 de Urologia — UEA/ESA."
+  "background_color":"#070a13",
+  "theme_color":"#6d28d9",
+  "description":"MEDCID Urologia AP1 — UEA/ESA, com módulos, questões, revisões, banco de erros, mapas e modo pré-prova."
 }
