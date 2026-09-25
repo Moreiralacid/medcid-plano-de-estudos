@@ -1,0 +1,30 @@
+    recoveryPriorityScore=function(subject){
+      const a=subjectAssessment(subject),w=state.recovery.weights,today=todayISO();
+      const inferred=state.reviews.filter(r=>!r.archived&&r.kind!=='Pré-prova'&&normalize(r.subject)===normalize(subject.name)).flatMap(r=>r.items||[]).filter(i=>!i.done&&(i.originalDate||i.date)<today).length;
+      const backlog=Math.max(Number(a.backlog||0),inferred),base=(Number(a.urgency)*w.urgency+Number(a.importance)*w.importance+Number(a.difficulty)*w.difficulty+Math.min(backlog,5)*w.backlog+Math.min(Math.max(Number(subject.weight||1),1),5)*w.weight+Number(a.recovery)*w.recovery)/5;
+      const topics=subject.topics||[],pending=topics.filter(t=>!t.done).length,pendingBonus=topics.length?Math.round(pending/topics.length*25):0;
+      const days=a.exam?Math.ceil((parseISO(a.exam)-parseISO(today))/86400000):999,examBonus=days<0?-20:days<=3?35:days<=7?28:days<=14?18:days<=30?10:0;
+      return Math.max(0,Math.min(100,Math.round(base+pendingBonus+examBonus)));
+    };
+
+    generateRecoveryPlan=function(){
+      const ranked=rankedRecoverySubjects();if(!ranked.length){toast('Cadastre ao menos uma disciplina.');showTab('disciplinas');return;}if(state.recovery.plan.length&&!confirm('Substituir o plano atual por um novo ciclo de sete dias?'))return;
+      const weekly=Math.max(7,Number(state.config.weeklyGoal||16)),available=Math.max(60,Number(state.recovery.profile.hours||3)*60),daily=Math.round(Math.min(available,weekly*60/7)),used={},cursor={},plan=[],start=todayISO();
+      for(let day=0;day<7;day++){
+        const planDate=addDays(start,day),candidates=ranked.map(s=>{const a=subjectAssessment(s),exam=a.exam,dd=exam?Math.ceil((parseISO(exam)-parseISO(planDate))/86400000):999,dayAdj=dd<0?-70:dd<=1?35:dd<=3?22:dd<=7?12:0,pending=(s.topics||[]).filter(t=>!t.done).length,score=s.recoveryScore+dayAdj+Math.min(pending*3,18)-(used[s.id]||0)*14;return {s,score};}).sort((a,b)=>b.score-a.score),s=candidates[0].s;
+        used[s.id]=(used[s.id]||0)+1;const open=(s.topics||[]).filter(t=>!t.done),a=subjectAssessment(s),idx=cursor[s.id]||0,topic=open.length?open[idx%open.length].name:(a.exam&&a.exam>=planDate?`Revisão direcionada para prova de ${s.name}`:`Pontos prioritários de ${s.name}`);cursor[s.id]=idx+1;
+        const theory=Math.round(daily*.55),review=Math.round(daily*.20),questionsMin=daily-theory-review,questions=Math.max(10,Math.round(questionsMin/3));
+        plan.push({id:uid(),day,type:'Estudo principal',subject:s.name,topic,method:'Teoria direcionada + recordação ativa',minutes:theory,questions:0,status:'Pendente'});
+        plan.push({id:uid(),day,type:'Revisão',subject:s.name,topic:`Revisar ${topic}`,method:'Recordação ativa',minutes:review,questions:0,status:'Pendente'});
+        plan.push({id:uid(),day,type:'Questões',subject:s.name,topic:`Aplicar ${topic}`,method:'Questões comentadas',minutes:questionsMin,questions,status:'Pendente'});
+      }
+      state.recovery.profile.start=start;state.recovery.plan=plan;save();renderAll();showTab('plano7');toast(`Plano de sete dias criado para ${weekly}h/semana, limitado pela sua disponibilidade diária.`);
+    };
+
+    renderRecoveryPlan=function(){
+      const area=$('#planWeek');if(!area)return;const m=recoveryPlanMetrics(),start=state.recovery.profile.start||todayISO(),stale=m.tasks&&addDays(start,6)<todayISO();
+      $('#planTaskCount').textContent=m.tasks;$('#planExecutionRate').textContent=m.execution+'%';$('#planMinutesDone').textContent=(m.minutes/60).toFixed(1)+'h';$('#planQuestionsDone').textContent=m.questions;
+      $('#planEmpty').style.display=!m.tasks||stale?'block':'none';if(stale)$('#planEmpty').textContent='Este ciclo de 7 dias terminou. Gere um novo plano para recalcular prioridades e provas.';area.style.display=m.tasks?'grid':'none';
+      area.innerHTML=Array.from({length:7},(_,day)=>{const date=addDays(start,day),weekday=parseISO(date).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','').toUpperCase(),tasks=state.recovery.plan.filter(t=>t.day===day);return `<article class="plan-day ${date===todayISO()?'today':''}"><header><div><b>${weekday} · Dia ${day+1}</b><br><span>${fmtDate(date)}</span></div><span>${tasks.filter(t=>t.status==='Concluída').length}/${tasks.length}</span></header>${tasks.map(t=>`<div class="plan-task ${t.status==='Concluída'?'completed':t.status==='Parcial'?'partial':''}" onclick="advancePlanTask('${t.id}')"><span class="task-type">${escapeHtml(t.type)}</span><b>Disciplina: ${escapeHtml(t.subject)}</b><small><strong>Assunto:</strong> ${escapeHtml(t.topic)}</small><small>${escapeHtml(t.method||'Estudo ativo')} · ${t.minutes} min${t.questions?' · '+t.questions+' questões':''} · ${t.status}</small></div>`).join('')}</article>`;}).join('');
+    };
+
