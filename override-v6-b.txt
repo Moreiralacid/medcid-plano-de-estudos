@@ -1,0 +1,23 @@
+    renderReviews=function(){
+      const filter=normalize($('#reviewFilter')?.value||''),status=$('#reviewStatus')?.value||'all',t=todayISO();let rows=[];
+      state.reviews.filter(r=>!r.archived).forEach(r=>(r.items||[]).forEach(it=>rows.push({...it,parent:r})));
+      rows=rows.filter(it=>{const text=normalize(`${it.parent.subject} ${it.parent.topic} ${it.date} ${it.label}`);const okText=!filter||text.includes(filter);const okStatus=status==='all'||(status==='today'&&it.date===t&&!it.done)||(status==='overdue'&&it.date<t&&!it.done)||(status==='pending'&&!it.done)||(status==='done'&&it.done);return okText&&okStatus;}).sort((a,b)=>{
+        const ap=a.parent.kind==='Pré-prova'?0:1,bp=b.parent.kind==='Pré-prova'?0:1;
+        if(ap!==bp)return ap-bp;
+        const ae=a.parent.examDate||'9999-12-31',be=b.parent.examDate||'9999-12-31';
+        return ae.localeCompare(be)||a.date.localeCompare(b.date);
+      });
+      $('#reviewTable').innerHTML=`<thead><tr><th>Status</th><th>Data</th><th>Rev.</th><th>Disciplina</th><th>Assunto</th><th>Prioridade</th><th>Ações</th></tr></thead><tbody>${rows.map(it=>{const cls=it.done?'green':it.date<t?'red':it.date===t?'orange':'blue',label=it.done?'Concluída':it.date<t?(it.parent.kind==='Pré-prova'?'Pré-prova atrasada':'Atrasada'):it.date===t?'Hoje':'Programada';return `<tr><td><span class="badge ${cls}">${label}</span></td><td>${fmtDate(it.date)}</td><td><b>${it.label}</b></td><td>${escapeHtml(it.parent.subject)}</td><td>${escapeHtml(it.parent.topic)}</td><td>${priorityBadge(it.parent.priority)}</td><td class="actions"><button class="btn small soft" onclick="completeReview('${it.parent.id}','${it.id}')">${it.done?'Desmarcar':'Check'}</button><button class="btn small ghost" onclick="editReviewGroup('${it.parent.id}')">Editar grupo</button><button class="btn small ghost" onclick="deleteReviewGroup('${it.parent.id}')">Excluir grupo</button></td></tr>`;}).join('')||`<tr><td colspan="7"><div class="empty">Nenhuma revisão ativa encontrada.</div></td></tr>`}</tbody>`;
+    };
+
+    renderReviewCalendar=function(){
+      const area=$('#reviewCalendarGrid');if(!area)return;
+      const year=calendarCursor.getFullYear(),month=calendarCursor.getMonth();$('#calendarMonthLabel').textContent=new Date(year,month,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,m=>m.toUpperCase());
+      const heads=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map(x=>`<div class="month-head">${x}</div>`).join(''),first=new Date(year,month,1),startOffset=(first.getDay()+6)%7,start=new Date(year,month,1-startOffset);
+      const reviews=state.reviews.filter(r=>!r.archived).flatMap(r=>(r.items||[]).filter(i=>!i.done).map(i=>({date:i.date,type:r.examSubjectId?'exam-review':'review',title:`${r.examSubjectId?'Pré-prova':'Revisão'}: ${r.subject} · ${i.label}`})));
+      const cards=state.flashcards.map(c=>({date:c.nextReview||todayISO(),type:'flash',title:`Flashcard: ${c.subject} · ${c.topic}`}));
+      const exams=state.subjects.flatMap(subject=>{const exam=subjectAssessment(subject).exam;return exam?[{date:exam,type:'exam',title:`Prova: ${subject.name}`,subject:subject.name}]:[];});
+      const all=[...exams,...reviews,...cards],days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const iso=d.toISOString().slice(0,10),events=all.filter(e=>e.date===iso).sort((a,b)=>a.type==='exam'?-1:b.type==='exam'?1:0).slice(0,7),exam=events.find(e=>e.type==='exam');return `<div class="month-day ${d.getMonth()!==month?'muted':''} ${iso===todayISO()?'today':''}" aria-label="${fmtDate(iso)}">${d.getDate()}${exam?`<span class="exam-chip" title="${escapeHtml(exam.title)}">PROVA · ${escapeHtml(exam.subject)}</span>`:''}<div class="day-dots">${events.map(e=>`<i class="${e.type}" title="${escapeHtml(e.title)}"></i>`).join('')}</div></div>`;}).join('');
+      area.innerHTML=heads+days;
+    };
+
