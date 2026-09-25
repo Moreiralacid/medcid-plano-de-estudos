@@ -1,0 +1,63 @@
+
+    /* ===== MEDCID v6: integridade temporal e prioridade pré-prova ===== */
+    calcOverallProgress=function(){
+      const topics=state.subjects.flatMap(s=>s.topics||[]);
+      const topicDone=topics.filter(t=>t.done).length;
+      const reviews=state.reviews.filter(r=>!r.archived).flatMap(r=>r.items||[]);
+      const reviewDone=reviews.filter(r=>r.done).length;
+      const tasksDone=state.tasks.filter(t=>t.done).length;
+      const cardsDone=state.flashcards.filter(c=>(c.reviewCount||0)>0).length;
+      const recoveryDone=state.recovery.plan.filter(t=>t.status==='Concluída').length+state.recovery.plan.filter(t=>t.status==='Parcial').length*.5;
+      const denom=topics.length+reviews.length+state.tasks.length+state.flashcards.length+state.recovery.plan.length;
+      const num=topicDone+reviewDone+tasksDone+cardsDone+recoveryDone;
+      return denom?Math.round(num/denom*100):0;
+    };
+    todaysReviews=function(){const t=todayISO();return state.reviews.filter(r=>!r.archived).flatMap(r=>(r.items||[]).map(it=>({...it,parent:r}))).filter(it=>it.date===t&&!it.done);};
+    overdueReviews=function(){const t=todayISO();return state.reviews.filter(r=>!r.archived).flatMap(r=>(r.items||[]).map(it=>({...it,parent:r}))).filter(it=>it.date<t&&!it.done);};
+    pendingReviews=function(){return state.reviews.filter(r=>!r.archived).flatMap(r=>(r.items||[]).map(it=>({...it,parent:r}))).filter(it=>!it.done);};
+
+    syncExamReview=function(subject,examDate){
+      const subjectId=String(subject.id),index=state.reviews.findIndex(r=>String(r.examSubjectId||'')===subjectId),current=index>=0?state.reviews[index]:null;
+      if(!examDate){if(index>=0){state.reviews.splice(index,1);return true;}return false;}
+      const previous=current?.items||[],today=todayISO(),archived=examDate<today;
+      const items=EXAM_REVIEW_OFFSETS.map(offset=>{
+        const old=previous.find(item=>Number(item.examOffset)===offset),canonical=addDays(examDate,-offset);
+        const movedFrom=old?.date&&old.date!==canonical?old.date:(old?.rescheduledDateBeforeRepair||null);
+        const item={id:old?.id||uid(),label:`D-${offset}`,date:canonical,done:!!old?.done,completedAt:old?.completedAt||null,xp:old?.xp||25,examOffset:offset};
+        if(old?.xpAwarded!==undefined)item.xpAwarded=old.xpAwarded;
+        if(old?.originalDate)item.originalDate=old.originalDate;
+        if(movedFrom)item.rescheduledDateBeforeRepair=movedFrom;
+        return item;
+      });
+      const next={id:current?.id||uid(),subject:subject.name,topic:`Preparação para prova de ${subject.name}`,baseDate:items[0].date,priority:'Alta',kind:'Pré-prova',examSubjectId:subjectId,examDate,archived,items};
+      if(current){const changed=JSON.stringify(current)!==JSON.stringify(next);state.reviews[index]=next;return changed;}
+      state.reviews.push(next);return true;
+    };
+
+    rebalanceReviewBacklog=function(){
+      const today=todayISO(),rank={Alta:0,Média:1,Baixa:2};
+      const backlog=state.reviews.flatMap(group=>{
+        if(group.archived||group.kind==='Pré-prova')return[];
+        return (group.items||[]).filter(item=>!item.done&&item.date<today).map(item=>({group,item}));
+      });
+      if(!backlog.length)return toast('Não há revisões gerais atrasadas para organizar. Revisões pré-prova permanecem fixas na data correta.');
+      if(!confirm(`Redistribuir ${backlog.length} revisão(ões) gerais atrasada(s)? Revisões D-30/D-15/D-7/D-3/D-1 não serão movidas.`))return;
+      const ids=new Set(backlog.map(x=>x.item.id)),load={},groups={},examDates=new Set();
+      state.subjects.forEach(subject=>{const exam=subjectAssessment(subject).exam;if(exam&&exam>=today)examDates.add(exam);});
+      state.reviews.filter(group=>!group.archived).forEach(group=>(group.items||[]).forEach(item=>{
+        if(item.done||ids.has(item.id)||item.date<today)return;
+        load[item.date]=(load[item.date]||0)+1;(groups[item.date]??=new Set()).add(group.id);
+      }));
+      const daysToExam=group=>{
+        const subject=state.subjects.find(s=>normalize(s.name)===normalize(group.subject)),exam=subject?subjectAssessment(subject).exam:'';
+        return exam&&exam>=today?Math.ceil((parseISO(exam)-parseISO(today))/86400000):999;
+      };
+      backlog.sort((a,b)=>daysToExam(a.group)-daysToExam(b.group)||(rank[a.group.priority]??1)-(rank[b.group.priority]??1)||(a.item.originalDate||a.item.date).localeCompare(b.item.originalDate||b.item.date));
+      backlog.forEach(({group,item})=>{
+        const original=item.originalDate||item.date;let date=addDays(today,1);
+        while((load[date]||0)>=5||groups[date]?.has(group.id)||examDates.has(date))date=addDays(date,1);
+        item.originalDate=original;item.date=date;load[date]=(load[date]||0)+1;(groups[date]??=new Set()).add(group.id);
+      });
+      save();renderAll();toast(`${backlog.length} revisão(ões) gerais redistribuída(s). As revisões pré-prova foram preservadas.`);
+    };
+
