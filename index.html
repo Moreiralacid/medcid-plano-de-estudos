@@ -8,17 +8,18 @@
   <style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui;background:#070a13;color:#f8fafc}main{padding:28px;text-align:center}small{color:#aab5c8}</style>
 </head>
 <body>
-<main id="boot"><strong>MEDCID</strong><br><small>Carregando atualização v6…</small></main>
+<main id="boot"><strong>MEDCID</strong><br><small>Carregando atualização v6.1…</small></main>
 <script>
 (async()=>{
+  const ref='v6-exams-20260929';
   const [loaderRes,baseRes,aRes,bRes,cRes]=await Promise.all([
-    fetch('./loader-v5.html?ref=v6',{cache:'no-store'}),
-    fetch('./app-base-v4.html?ref=v6',{cache:'no-store'}),
-    fetch('./override-v6-a.txt?ref=v6',{cache:'no-store'}),
-    fetch('./override-v6-b.txt?ref=v6',{cache:'no-store'}),
-    fetch('./override-v6-c.txt?ref=v6',{cache:'no-store'})
+    fetch('./loader-v5.html?ref='+ref,{cache:'no-store'}),
+    fetch('./app-base-v4.html?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v6-a.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v6-b.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v6-c.txt?ref='+ref,{cache:'no-store'})
   ]);
-  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok) throw new Error('Falha ao carregar arquivos da v6.');
+  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok) throw new Error('Falha ao carregar arquivos da v6.1.');
   const loader=await loaderRes.text();
   const p0=loader.indexOf('const p='),p1=loader.indexOf(',f=[];',p0);
   if(p0<0||p1<0) throw new Error('Não foi possível recuperar os patches v5.');
