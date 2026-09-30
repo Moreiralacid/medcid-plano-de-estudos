@@ -26,6 +26,7 @@
         const item={id:old?.id||uid(),label:`D-${offset}`,date:canonical,done:!!old?.done,completedAt:old?.completedAt||null,xp:old?.xp||25,examOffset:offset};
         if(old?.xpAwarded!==undefined)item.xpAwarded=old.xpAwarded;
         if(old?.originalDate)item.originalDate=old.originalDate;
+        if(old?.completionHistory)item.completionHistory=old.completionHistory;
         if(movedFrom)item.rescheduledDateBeforeRepair=movedFrom;
         return item;
       });
@@ -60,4 +61,47 @@
       });
       save();renderAll();toast(`${backlog.length} revisão(ões) gerais redistribuída(s). As revisões pré-prova foram preservadas.`);
     };
+
+    /* ===== MEDCID v6.1: calendário de provas atualizado em 29/09/2026 ===== */
+    const MEDCID_EXAM_SCHEDULE_VERSION='2026-09-29.1';
+    const MEDCID_EXAM_SCHEDULE={
+      'Clínica Cirúrgica II':'2026-10-06',
+      'Dermatologia':'2026-10-30',
+      'Urologia':'2026-11-03',
+      'Clínica Médica II':'2026-11-19',
+      'Ortopedia':'2026-11-30'
+    };
+
+    function applyMedcidExamSchedule(){
+      const today=todayISO();let changed=false,activeExamCount=0;
+      state.recovery=state.recovery||{};state.recovery.assessments=state.recovery.assessments||{};state.recovery.profile=state.recovery.profile||{};
+      state.subjects.forEach(subject=>{
+        const entry=Object.entries(MEDCID_EXAM_SCHEDULE).find(([name])=>normalize(name)===normalize(subject.name));
+        if(!entry)return;
+        const examDate=entry[1],key=String(subject.id),assessment=subjectAssessment(subject),previousExam=assessment.exam||'';
+        if(examDate>=today)activeExamCount++;
+        if(previousExam!==examDate){
+          state.recovery.assessments[key]={...assessment,exam:examDate};
+          changed=true;
+        }
+        if(syncExamReview(subject,examDate))changed=true;
+        const track=state.reviews.find(r=>String(r.examSubjectId||'')===key);
+        (track?.items||[]).forEach(item=>{
+          if(item.done&&item.date>today&&item.completedAt&&item.completedAt<item.date){
+            item.completionHistory=Array.isArray(item.completionHistory)?item.completionHistory:[];
+            item.completionHistory.push({completedAt:item.completedAt,examDate:previousExam||null,resetAt:new Date().toISOString(),reason:'Data da prova atualizada; revisão futura reaberta.'});
+            item.done=false;item.completedAt=null;item.xpAwarded=false;changed=true;
+          }
+        });
+      });
+      if(Number(state.recovery.profile.exams||0)!==activeExamCount){state.recovery.profile.exams=activeExamCount;changed=true;}
+      if(state.examScheduleMeta?.version!==MEDCID_EXAM_SCHEDULE_VERSION){
+        state.examScheduleMeta={version:MEDCID_EXAM_SCHEDULE_VERSION,source:'backup MEDCID exportado em 30/09/2026',appliedAt:new Date().toISOString(),exams:Object.entries(MEDCID_EXAM_SCHEDULE).map(([subject,date])=>({subject,date}))};
+        changed=true;
+      }
+      if(changed)save();
+    }
+
+    const initBeforeExamSchedule=init;
+    init=function(){applyMedcidExamSchedule();return initBeforeExamSchedule();};
 
