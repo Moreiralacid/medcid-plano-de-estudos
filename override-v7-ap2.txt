@@ -1,0 +1,121 @@
+
+    /* ===== MEDCID v7: transição acadêmica para AP2 ===== */
+    const MEDCID_AP2_VERSION='2026-10-07.1';
+    const MEDCID_AP2_TOPICS={
+      'Clínica Médica II':[
+        'Hemoterapia e reações transfusionais',
+        'Plaquetopenias e PTI',
+        'Hemofilias',
+        'Tromboses e trombofilias',
+        'Hemostasia',
+        'Onco-hematologia',
+        'Espondiloartrites',
+        'Lúpus eritematoso sistêmico',
+        'Síndrome antifosfolípide',
+        'Síndrome de Sjögren',
+        'Vasculites',
+        'Miopatias inflamatórias',
+        'Esclerose sistêmica',
+        'Síndrome nefrítica e glomerulopatias',
+        'Terapia renal substitutiva: hemodiálise, diálise peritoneal e transplante'
+      ],
+      'Dermatologia':[
+        'Micoses superficiais',
+        'Micoses profundas',
+        'Acne e rosácea',
+        'Colagenoses',
+        'Farmacodermias'
+      ],
+      'Urologia':[
+        'Neurofisiologia miccional',
+        'Urgências urológicas traumáticas',
+        'Urgências urológicas não traumáticas',
+        'Câncer de pênis',
+        'Câncer de testículo',
+        'Uroginecologia: incontinência urinária',
+        'Bexiga hiperativa'
+      ],
+      'Ortopedia':[],
+      'Clínica Cirúrgica II':[],
+      'Medicina Legal':[]
+    };
+
+    const MEDCID_AP2_PENDING_CONFIRMATION=['Ortopedia','Clínica Cirúrgica II','Medicina Legal'];
+
+    function applyMedcidAP2Migration(){
+      if(state.ap2Meta?.version===MEDCID_AP2_VERSION)return false;
+      const snapshot=JSON.parse(JSON.stringify({
+        subjects:state.subjects,
+        reviews:state.reviews,
+        tasks:state.tasks,
+        recovery:state.recovery,
+        config:state.config,
+        archivedAt:new Date().toISOString()
+      }));
+      state.phaseArchives=state.phaseArchives||{};
+      if(!state.phaseArchives.AP1_2026_2)state.phaseArchives.AP1_2026_2=snapshot;
+
+      state.config={...(state.config||{}),cycleName:'6º período · AP2'};
+      state.reviews=(state.reviews||[]).map(group=>group.kind==='Pré-prova'?group:{...group,phase:'AP1',archived:true});
+      state.recovery=state.recovery||{};
+      state.recovery.plan=[];
+      state.recovery.profile={...(state.recovery.profile||{}),start:todayISO()};
+
+      state.subjects.forEach(subject=>{
+        const entry=Object.entries(MEDCID_AP2_TOPICS).find(([name])=>normalize(name)===normalize(subject.name));
+        if(!entry)return;
+        const names=entry[1],previous=subject.topics||[];
+        subject.topics=names.map(name=>{
+          const old=previous.find(t=>t.phase==='AP2'&&normalize(t.name)===normalize(name));
+          return old||{
+            id:uid(),name,heat:'Não classificado',difficulty:'Não classificado',roi:'Não classificado',
+            done:false,created:todayISO(),phase:'AP2'
+          };
+        });
+        subject.phase='AP2';
+        subject.ap2ContentStatus=names.length?'confirmado':'pendente de confirmação';
+
+        const assessment=subjectAssessment(subject);
+        state.recovery.assessments[String(subject.id)]={...assessment,grade:0,backlog:0};
+
+        if(normalize(subject.name)===normalize('Clínica Cirúrgica II')||normalize(subject.name)===normalize('Medicina Legal')){
+          state.recovery.assessments[String(subject.id)].exam='';
+          syncExamReview(subject,'');
+        }
+      });
+
+      state.ap2Meta={
+        version:MEDCID_AP2_VERSION,
+        activatedAt:new Date().toISOString(),
+        confirmedSubjects:['Clínica Médica II','Dermatologia','Urologia'],
+        pendingConfirmation:MEDCID_AP2_PENDING_CONFIRMATION,
+        note:'Conteúdos AP2 migrados apenas onde havia escopo confirmado. AP1 preservada em phaseArchives.AP1_2026_2.'
+      };
+      save();
+      return true;
+    }
+
+    const calcOverallProgressBeforeAP2=calcOverallProgress;
+    calcOverallProgress=function(){
+      const ap2Topics=state.subjects.flatMap(s=>(s.topics||[]).filter(t=>t.phase==='AP2'));
+      const topicDone=ap2Topics.filter(t=>t.done).length;
+      const reviews=state.reviews.filter(r=>!r.archived).flatMap(r=>r.items||[]);
+      const reviewDone=reviews.filter(r=>r.done).length;
+      const tasks=state.tasks||[],tasksDone=tasks.filter(t=>t.done).length;
+      const cards=state.flashcards||[],cardsDone=cards.filter(c=>(c.reviewCount||0)>0).length;
+      const plan=state.recovery?.plan||[],recoveryDone=plan.filter(t=>t.status==='Concluída').length+plan.filter(t=>t.status==='Parcial').length*.5;
+      const denom=ap2Topics.length+reviews.length+tasks.length+cards.length+plan.length;
+      const num=topicDone+reviewDone+tasksDone+cardsDone+recoveryDone;
+      return denom?Math.round(num/denom*100):0;
+    };
+
+    const initBeforeAP2=init;
+    init=function(){
+      const result=initBeforeAP2();
+      if(applyMedcidAP2Migration()){
+        applyMedcidExamSchedule();
+        renderAll();
+        toast('MEDCID atualizado para AP2. O histórico da AP1 foi preservado.');
+      }
+      return result;
+    };
