@@ -12,14 +12,14 @@
 <script>
 (async()=>{
   const ref='v6-exams-20260929';
-  const [loaderRes,baseRes,aRes,bRes,cRes]=await Promise.all([
+  const [loaderRes,baseRes,aRes,bRes,cRes,dRes]=await Promise.all([
     fetch('./loader-v5.html?ref='+ref,{cache:'no-store'}),
     fetch('./app-base-v4.html?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-a.txt?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-b.txt?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-c.txt?ref='+ref,{cache:'no-store'})
   ]);
-  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok) throw new Error('Falha ao carregar arquivos da v6.1.');
+  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok||!dRes.ok) throw new Error('Falha ao carregar arquivos da v6.1.');
   const loader=await loaderRes.text();
   const p0=loader.indexOf('const p='),p1=loader.indexOf(',f=[];',p0);
   if(p0<0||p1<0) throw new Error('Não foi possível recuperar os patches v5.');
@@ -30,9 +30,9 @@
     if(x<0||y>=0) throw new Error('Patch v5 '+(i+1)+' incompatível.');
     s=s.replace(from,to);
   }
-  s=s.replace('    const CURRENT_DATA_VERSION = 5;\n','    const CURRENT_DATA_VERSION = 6;\n');
+  s=s.replace('    const CURRENT_DATA_VERSION = 5;\n','    const CURRENT_DATA_VERSION = 7;\n');
   const hook='    window.completeReview=completeReview; window.rebalanceReviewBacklog=rebalanceReviewBacklog; window.editReviewGroup=editReviewGroup;';
-  const override=(await aRes.text())+(await bRes.text())+(await cRes.text());
+  const override=(await aRes.text())+(await bRes.text())+(await cRes.text())+(await dRes.text());
   const hx=s.indexOf(hook);
   if(hx<0) throw new Error('Ponto de injeção v6 não encontrado.');
   s=s.slice(0,hx)+override+s.slice(hx);
