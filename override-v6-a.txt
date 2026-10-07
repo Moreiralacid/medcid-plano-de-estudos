@@ -62,10 +62,9 @@
       save();renderAll();toast(`${backlog.length} revisão(ões) gerais redistribuída(s). As revisões pré-prova foram preservadas.`);
     };
 
-    /* ===== MEDCID v6.1: calendário de provas atualizado em 29/09/2026 ===== */
-    const MEDCID_EXAM_SCHEDULE_VERSION='2026-09-29.1';
+    /* ===== MEDCID v6.2: calendário AP2 atualizado em 07/10/2026 ===== */
+    const MEDCID_EXAM_SCHEDULE_VERSION='2026-10-07.1';
     const MEDCID_EXAM_SCHEDULE={
-      'Clínica Cirúrgica II':'2026-10-06',
       'Dermatologia':'2026-10-30',
       'Urologia':'2026-11-03',
       'Clínica Médica II':'2026-11-19',
@@ -73,14 +72,14 @@
     };
 
     function applyMedcidExamSchedule(){
-      const today=todayISO();let changed=false,activeExamCount=0;
+      const today=todayISO();let changed=false,activeExamCount=0,scheduleChanged=state.examScheduleMeta?.version!==MEDCID_EXAM_SCHEDULE_VERSION;
       state.recovery=state.recovery||{};state.recovery.assessments=state.recovery.assessments||{};state.recovery.profile=state.recovery.profile||{};
       state.subjects.forEach(subject=>{
         const entry=Object.entries(MEDCID_EXAM_SCHEDULE).find(([name])=>normalize(name)===normalize(subject.name));
         if(!entry)return;
         const examDate=entry[1],key=String(subject.id),assessment=subjectAssessment(subject),previousExam=assessment.exam||'';
         if(examDate>=today)activeExamCount++;
-        if(previousExam!==examDate){
+        if((scheduleChanged||!previousExam)&&previousExam!==examDate){
           state.recovery.assessments[key]={...assessment,exam:examDate};
           changed=true;
         }
@@ -95,8 +94,8 @@
         });
       });
       if(Number(state.recovery.profile.exams||0)!==activeExamCount){state.recovery.profile.exams=activeExamCount;changed=true;}
-      if(state.examScheduleMeta?.version!==MEDCID_EXAM_SCHEDULE_VERSION){
-        state.examScheduleMeta={version:MEDCID_EXAM_SCHEDULE_VERSION,source:'backup MEDCID exportado em 30/09/2026',appliedAt:new Date().toISOString(),exams:Object.entries(MEDCID_EXAM_SCHEDULE).map(([subject,date])=>({subject,date}))};
+      if(scheduleChanged){
+        state.examScheduleMeta={version:MEDCID_EXAM_SCHEDULE_VERSION,source:'transição AP2 em 07/10/2026; datas preservadas do calendário já registrado',appliedAt:new Date().toISOString(),exams:Object.entries(MEDCID_EXAM_SCHEDULE).map(([subject,date])=>({subject,date}))};
         changed=true;
       }
       if(changed)save();
