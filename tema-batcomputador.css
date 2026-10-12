@@ -1,0 +1,103 @@
+/* ===== MEDCID — Tema Batcomputador (paleta do MEDCID COMPUTER) =====
+   Ativo quando <html> tem a classe "bat". Não altera dados nem lógica. */
+
+html.bat body{
+  --bg:#020912; --surface:#08141a; --surface-2:#0d1e25; --text:#f5f8f9; --muted:#9fc4c9; --line:rgba(112,162,168,.28);
+  --primary:#00f3ff; --primary-2:#70a2a8; --accent:#2fffa8; --good:#2fffa8; --warn:#ff9d2e; --bad:#ff3b4e; --info:#b3e2e6;
+  --red:#ff3b4e; --orange:#ff9d2e; --yellow:#ffd23e; --green:#2fffa8;
+  --shadow:0 0 0 1px rgba(112,162,168,.10),0 18px 50px rgba(0,0,0,.55);
+  --radius:6px; --radius-sm:4px;
+  --cut:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  font-family:"Chakra Petch",Inter,system-ui,sans-serif;
+  background:
+    linear-gradient(rgba(112,162,168,.045) 1px,transparent 1px) 0 0/100% 4px,
+    radial-gradient(circle at 15% 0,rgba(0,243,255,.10),transparent 40%),
+    radial-gradient(circle at 90% 10%,rgba(47,255,168,.06),transparent 35%),
+    var(--bg);
+  color:var(--text);
+}
+html.bat body h1,html.bat body h2,html.bat body .eyebrow,html.bat body .nav-label,html.bat body .sidebar-brand strong{font-family:Orbitron,"Chakra Petch",system-ui,sans-serif;letter-spacing:.06em}
+html.bat body h2{text-transform:uppercase;font-size:1.05rem;color:#b3e2e6}
+html.bat body p,html.bat body small,html.bat body label,html.bat body .muted{font-family:"Share Tech Mono","Chakra Petch",monospace}
+html.bat body ::selection{background:rgba(0,243,255,.35)}
+html.bat body :focus-visible{outline:2px solid var(--primary)}
+
+/* Cabeçalho */
+html.bat body .hero{background:linear-gradient(135deg,rgba(13,30,37,.92),rgba(2,9,18,.96));border:1px solid rgba(0,243,255,.25);border-radius:0;clip-path:var(--cut);box-shadow:inset 0 0 40px rgba(0,243,255,.06)}
+html.bat body .hero:before{background:rgba(0,243,255,.06)}
+html.bat body .hero h1{color:#e8fbff;text-shadow:0 0 18px rgba(0,243,255,.35);font-size:clamp(1.5rem,3.4vw,2.6rem);letter-spacing:.02em}
+html.bat body .hero p{color:#9fc4c9}
+html.bat body .eyebrow{color:#2fffa8!important}
+
+/* Botões */
+html.bat body .btn{border-radius:0;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);background:rgba(0,243,255,.12);border:1px solid rgba(0,243,255,.55);color:#e8fbff;box-shadow:none;text-transform:uppercase;letter-spacing:.08em;font-size:.82rem}
+html.bat body .btn:hover{background:rgba(0,243,255,.22);filter:none}
+html.bat body .btn.secondary,html.bat body .btn.soft,html.bat body .btn.ghost{background:rgba(112,162,168,.08);border-color:rgba(112,162,168,.45);color:var(--text)}
+html.bat body .btn.danger{background:rgba(255,59,78,.14);border-color:rgba(255,59,78,.7);color:#ffb3bb}
+html.bat body #batToggle{border-color:#2fffa8;color:#2fffa8}
+
+/* Barra lateral e abas */
+html.bat body .sidebar{background:rgba(2,9,18,.88);border:1px solid var(--line);border-radius:0;box-shadow:none}
+html.bat body .brand-mark{border-radius:0;clip-path:var(--cut);background:rgba(0,243,255,.12);border:1px solid rgba(0,243,255,.5);color:#00f3ff;box-shadow:0 0 14px rgba(0,243,255,.25)}
+html.bat body .tab{border-radius:0;text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;position:relative}
+html.bat body .tab.active{background:rgba(0,243,255,.07);color:#e8fbff;box-shadow:inset 3px 0 0 #00f3ff}
+html.bat body .tab .ico{border-radius:0;clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);background:var(--surface-2);color:#00f3ff}
+html.bat body .tab.beta:after{border-radius:0;background:rgba(47,255,168,.15);color:#2fffa8;border:1px solid rgba(47,255,168,.5)}
+
+/* Cartões e superfícies */
+html.bat body .card,html.bat body .stat,html.bat body .metric-card,html.bat body .form,html.bat body .task,html.bat body .today-item,html.bat body .pill-stat,
+html.bat body .world,html.bat body .node,html.bat body .rec,html.bat body .plan-day,html.bat body .error-card,html.bat body .priority-card,html.bat body .score-question,
+html.bat body .month-day,html.bat body .journey-step,html.bat body .device-tip,html.bat body .angels-kpi,html.bat body .weight-row,html.bat body .table-wrap,html.bat body .modal-card{
+  background:rgba(8,20,26,.78);border:1px solid var(--line);border-radius:0;box-shadow:none}
+html.bat body .card{clip-path:var(--cut);backdrop-filter:blur(8px)}
+html.bat body .card.glow,html.bat body .feature-hero,html.bat body .ai-connector-card,html.bat body .angels-banner,html.bat body .streak-card,html.bat body .flashcard{background:linear-gradient(135deg,rgba(0,243,255,.07),rgba(47,255,168,.04)),rgba(8,20,26,.85)}
+html.bat body .flashcard{border-radius:0;clip-path:var(--cut);border-color:rgba(0,243,255,.35)}
+html.bat body .streak-number{color:#ff9d2e;text-shadow:0 0 14px rgba(255,157,46,.4)}
+html.bat body .report-cover{background:linear-gradient(135deg,#061218,#0d1e25);border:1px solid rgba(0,243,255,.3);border-radius:0;clip-path:var(--cut)}
+
+/* Cartões de ação: cores mantidas como código, em versão HUD */
+html.bat body .action-card{border-radius:0;clip-path:var(--cut);border:1px solid;background:rgba(8,20,26,.9)!important}
+html.bat body .action-card.study{border-color:#00f3ff;box-shadow:inset 0 0 30px rgba(0,243,255,.12)}
+html.bat body .action-card.review{border-color:#2fffa8;box-shadow:inset 0 0 30px rgba(47,255,168,.12)}
+html.bat body .action-card.teacher{border-color:#ff9d2e;box-shadow:inset 0 0 30px rgba(255,157,46,.12)}
+html.bat body .action-card:after{background:rgba(255,255,255,.04)}
+html.bat body .action-icon{border-radius:0;background:rgba(255,255,255,.06)}
+
+/* Campos */
+html.bat body input,html.bat body select,html.bat body textarea{background:#020912;border-radius:0;border-color:var(--line);color:var(--text);font-family:"Share Tech Mono",monospace}
+html.bat body input:focus,html.bat body select:focus,html.bat body textarea:focus{border-color:#00f3ff;box-shadow:0 0 0 3px rgba(0,243,255,.15)}
+html.bat body select option{background:#020912;color:#f5f8f9}
+html.bat body input[type=date],html.bat body input[type=time]{color-scheme:dark}
+
+/* Tabelas, selos, progresso */
+html.bat body th{background:#0d1e25;color:#9fc4c9}
+html.bat body tr:hover td{background:rgba(0,243,255,.05)}
+html.bat body .badge{border-radius:0;font-family:"Share Tech Mono",monospace;text-transform:uppercase}
+html.bat body .badge.green{color:#2fffa8;background:rgba(47,255,168,.1)}
+html.bat body .badge.blue{color:#b3e2e6;background:rgba(112,162,168,.15)}
+html.bat body .badge.purple{color:#00f3ff;background:rgba(0,243,255,.1)}
+html.bat body .badge.red{color:#ff6b7a}
+html.bat body .badge.yellow{color:#ffd23e}
+html.bat body .progress{border-radius:0;background:#020912}
+html.bat body .progress>span{background:linear-gradient(90deg,#00f3ff,#2fffa8);box-shadow:0 0 10px rgba(0,243,255,.6)}
+html.bat body .xp-ring,html.bat body .diagnosis-score{background:conic-gradient(#00f3ff 0deg,#00f3ff var(--deg,var(--score-deg,0deg)),#0d1e25 0)}
+html.bat body .xp-ring>div,html.bat body .diagnosis-score>div{background:#020912}
+html.bat body .week-grid{border-radius:0}
+html.bat body .block{border-radius:0;background:rgba(0,243,255,.08);border-color:rgba(0,243,255,.3)}
+html.bat body .exam-chip{border-radius:0;background:rgba(255,59,78,.15);color:#ff6b7a}
+html.bat body .toast{background:#0d1e25;color:#e8fbff;border:1px solid #00f3ff;border-radius:0}
+html.bat body .backup-notice{border-radius:0}
+html.bat body .empty{border-radius:0;background:rgba(8,20,26,.6)}
+
+/* Pomodoro em modo HUD */
+html.bat body .pomodoro-card{border-radius:0;clip-path:var(--cut);background:radial-gradient(circle at 50% 30%,rgba(0,243,255,.12),transparent 55%),linear-gradient(160deg,#04121a,#020912);border:1px solid rgba(0,243,255,.25);--pomodoro-accent:#00f3ff}
+html.bat body .pomodoro-card.break-mode{--pomodoro-accent:#2fffa8;background:radial-gradient(circle at 50% 30%,rgba(47,255,168,.12),transparent 55%),linear-gradient(160deg,#04161a,#020912)}
+
+/* Esconde o botão de modo escuro: o tema Batcomputador já é escuro */
+html.bat body #darkToggle{display:none}
+
+/* Quando aberto dentro do MEDCID COMPUTER: cabeçalho compacto */
+html.bat.embed body .hero{padding:12px 16px}
+html.bat.embed body .hero h1{font-size:1.3rem;margin:2px 0}
+html.bat.embed body .hero p:not(.eyebrow){display:none}
+html.bat.embed body .app{padding-top:10px}

@@ -8,18 +8,19 @@
   <style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui;background:#070a13;color:#f8fafc}main{padding:28px;text-align:center}small{color:#aab5c8}</style>
 </head>
 <body>
-<main id="boot"><strong>MEDCID</strong><br><small>Carregando atualização v6.1…</small></main>
+<main id="boot"><strong>MEDCID</strong><br><small>Carregando…</small></main>
 <script>
 (async()=>{
-  const ref='v6-exams-20260929';
+  const ref='v7-ap2-20261012';
   const [loaderRes,baseRes,aRes,bRes,cRes,dRes]=await Promise.all([
     fetch('./loader-v5.html?ref='+ref,{cache:'no-store'}),
     fetch('./app-base-v4.html?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-a.txt?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-b.txt?ref='+ref,{cache:'no-store'}),
-    fetch('./override-v6-c.txt?ref='+ref,{cache:'no-store'})
+    fetch('./override-v6-c.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v7-ap2.txt?ref='+ref,{cache:'no-store'})
   ]);
-  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok||!dRes.ok) throw new Error('Falha ao carregar arquivos da v6.1.');
+  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok||!dRes.ok) throw new Error('Falha ao carregar arquivos da v7.');
   const loader=await loaderRes.text();
   const p0=loader.indexOf('const p='),p1=loader.indexOf(',f=[];',p0);
   if(p0<0||p1<0) throw new Error('Não foi possível recuperar os patches v5.');
@@ -36,6 +37,8 @@
   const hx=s.indexOf(hook);
   if(hx<0) throw new Error('Ponto de injeção v6 não encontrado.');
   s=s.slice(0,hx)+override+s.slice(hx);
+  const tema='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap"><link rel="stylesheet" href="./tema-batcomputador.css?ref='+ref+'"><script src="./tema-batcomputador.js?ref='+ref+'"><\/script>';
+  s=s.includes('</head>')?s.replace('</head>',tema+'</head>'):tema+s;
   document.open();document.write(s);document.close();
 })().catch(err=>{
   console.error(err);
