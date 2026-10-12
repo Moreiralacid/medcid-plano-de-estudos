@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medcid-learning-os-v13';
+const CACHE_NAME = 'medcid-learning-os-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', event => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request.url, { cache: 'no-cache', credentials: 'same-origin' })
         .then(response => {
           if (response.ok) caches.open(CACHE_NAME).then(cache => cache.put('./index.html', response.clone()));
           return response;
