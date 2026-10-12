@@ -1,0 +1,338 @@
+
+    /* ===== MEDCID v8: ciclo de estudos ===== */
+    const CICLO_HEAT_RANK={'Muito cobrado':0,'Cobrado':1,'Não classificado':2,'Ocasional':3,'Raro':4};
+    let cicloClockId=null, cicloAudio=null, cicloResetArmed=false;
+
+    function cicloState(){
+      state.cycle=state.cycle&&typeof state.cycle==='object'?state.cycle:{};
+      const c=state.cycle;
+      if(!Array.isArray(c.blocks))c.blocks=[];
+      if(!Array.isArray(c.log))c.log=[];
+      c.pos=Math.max(0,Number(c.pos||0));
+      if(!c.timer||typeof c.timer!=='object')c.timer={running:false,endAt:null,remaining:null,total:null,blockId:null};
+      if(c.blocks.length)c.pos%=c.blocks.length;else c.pos=0;
+      return c;
+    }
+    function cicloSubject(id){return state.subjects.find(s=>String(s.id)===String(id));}
+    function cicloTopics(subject){const all=subject?.topics||[];return subject?.phase==='AP2'?all.filter(t=>t.phase==='AP2'):all;}
+    function cicloAP1Grade(subject){
+      const arch=state.phaseArchives?.AP1_2026_2?.recovery?.assessments?.[String(subject.id)];
+      const g=Number(arch?.grade||0);return g>0?g:null;
+    }
+    function cicloCurrentBlock(){const c=cicloState();return c.blocks[c.pos]||null;}
+
+    function cicloBuildDefault(){
+      let subs=state.subjects.filter(s=>cicloTopics(s).length);
+      if(!subs.length)subs=[...state.subjects];
+      const pool=subs.map(s=>{
+        const pending=cicloTopics(s).filter(t=>!t.done).length;
+        const count=Math.max(1,Math.min(3,Math.round(pending/5)||1));
+        const g=cicloAP1Grade(s);
+        return {s,count,minutes:g!==null&&g<7?90:60};
+      });
+      const blocks=[];let last=null;
+      while(pool.some(p=>p.count>0)){
+        const options=pool.filter(p=>p.count>0).sort((a,b)=>b.count-a.count);
+        const pick=options.find(p=>p.s.id!==last)||options[0];
+        blocks.push({id:uid(),subjectId:String(pick.s.id),minutes:pick.minutes});
+        pick.count--;last=pick.s.id;
+      }
+      return blocks;
+    }
+    function cicloEnsureBlocks(){
+      const c=cicloState();
+      if(!c.blocks.length&&state.subjects.length){c.blocks=cicloBuildDefault();c.pos=0;cicloResetTimer(false);return true;}
+      c.blocks=c.blocks.filter(b=>cicloSubject(b.subjectId));
+      if(c.blocks.length)c.pos%=c.blocks.length;else c.pos=0;
+      return false;
+    }
+
+    function cicloSuggest(subject){
+      if(!subject)return null;
+      const topics=cicloTopics(subject),agg=aggregateQuestions();
+      const rateOf=t=>{const x=agg[normalize(subject.name+'|'+t.name)];return x&&x.total?x.rate:null;};
+      const weak=topics.map(t=>({t,r:rateOf(t)})).filter(x=>x.r!==null&&x.r<70).sort((a,b)=>a.r-b.r)[0];
+      if(weak)return {topic:weak.t,kind:'Questões',why:`${weak.r}% de acerto nas questões registradas`};
+      const pending=topics.filter(t=>!t.done).sort((a,b)=>(CICLO_HEAT_RANK[a.heat]??2)-(CICLO_HEAT_RANK[b.heat]??2));
+      if(pending[0])return {topic:pending[0],kind:'Teoria + questões',why:pending[0].heat==='Muito cobrado'?'assunto muito cobrado ainda não concluído':'próximo assunto pendente'};
+      if(topics.length)return {topic:null,kind:'Provas antigas',why:'todos os assuntos da fase concluídos'};
+      return {topic:null,kind:'Estudo livre',why:'nenhum assunto cadastrado nesta disciplina'};
+    }
+
+    function cicloMinutesWeek(subjectId){
+      const start=addDays(todayISO(),-6);
+      return cicloState().log.filter(l=>String(l.subjectId)===String(subjectId)&&l.date>=start).reduce((a,l)=>a+Number(l.minutes||0),0);
+    }
+    function cicloExamDays(subject){
+      const exam=subjectAssessment(subject).exam;if(!exam)return null;
+      return Math.round((parseISO(exam)-parseISO(todayISO()))/86400000);
+    }
+
+    /* ---- cronômetro ---- */
+    function cicloRemaining(){
+      const t=cicloState().timer;
+      if(t.running&&t.endAt)return Math.max(0,Math.ceil((Number(t.endAt)-Date.now())/1000));
+      return Math.max(0,Number(t.remaining??t.total??0));
+    }
+    function cicloResetTimer(persist=true){
+      const c=cicloState(),b=c.blocks[c.pos];
+      c.timer={running:false,endAt:null,total:b?Number(b.minutes)*60:0,remaining:b?Number(b.minutes)*60:0,blockId:b?.id||null};
+      if(persist)save();
+    }
+    function cicloToggleTimer(){
+      const c=cicloState();if(!c.blocks.length)return;
+      const t=c.timer;
+      if(t.blockId!==c.blocks[c.pos].id)cicloResetTimer(false);
+      if(t.running){t.remaining=cicloRemaining();t.running=false;t.endAt=null;}
+      else{t.endAt=Date.now()+cicloRemaining()*1000;t.running=true;}
+      save();renderCiclo();
+    }
+    function cicloBeep(){
+      try{cicloAudio=cicloAudio||new (window.AudioContext||window.webkitAudioContext)();const o=cicloAudio.createOscillator(),g=cicloAudio.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(cicloAudio.destination);o.start();o.stop(cicloAudio.currentTime+.7);}catch(e){}
+      try{if('Notification' in window&&Notification.permission==='granted')new Notification('MEDCID · Bloco concluído',{body:'Registre o assunto estudado e siga para o próximo bloco.'});}catch(e){}
+    }
+    function cicloConclude(auto){
+      const c=cicloState(),b=c.blocks[c.pos];if(!b)return;
+      const t=c.timer,total=Number(t.total||b.minutes*60),left=cicloRemaining();
+      const minutes=t.blockId===b.id?Math.round((total-left)/60):0;
+      const subject=cicloSubject(b.subjectId);
+      const topicId=$('#cicloTopic')?.value||'';
+      const topic=cicloTopics(subject).find(x=>x.id===topicId)||null;
+      const markDone=!!$('#cicloMarkDone')?.checked;
+      if(minutes>0){
+        c.log.push({id:uid(),date:todayISO(),subjectId:String(b.subjectId),minutes,topicId:topic?.id||null,topic:topic?.name||null});
+        if(c.log.length>1500)c.log=c.log.slice(-1500);
+        if(minutes>=25)adjustXP(10);
+      }
+      c.pos=(c.pos+1)%c.blocks.length;
+      cicloResetTimer(false);
+      if(markDone&&topic&&!topic.done){toggleTopic(subject.id,topic.id);}else{save();renderAll();}
+      if(auto)cicloBeep();
+      toast(minutes>0?`${subject?.name||'Bloco'}: ${minutes} min registrados${minutes>=25?' · +10 XP':''}.`:'Bloco encerrado sem tempo registrado.');
+    }
+    function cicloSkip(){const c=cicloState();if(!c.blocks.length)return;c.pos=(c.pos+1)%c.blocks.length;cicloResetTimer(false);save();renderCiclo();}
+    function cicloTick(){
+      const c=cicloState(),t=c.timer;
+      if(t.running&&cicloRemaining()<=0){cicloConclude(true);return;}
+      const s=cicloRemaining(),txt=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+      const el=$('#cicloTime');if(el)el.textContent=txt;
+      const mini=$('#cicloDashTime');if(mini)mini.textContent=t.running?txt:'';
+      const bar=$('#cicloTimeBar');if(bar)bar.style.width=(t.total?100*(1-s/t.total):0)+'%';
+    }
+    function startCicloClock(){if(cicloClockId)clearInterval(cicloClockId);cicloTick();cicloClockId=setInterval(cicloTick,1000);}
+
+    /* ---- edição dos blocos ---- */
+    function cicloMove(id,dir){
+      const c=cicloState(),i=c.blocks.findIndex(b=>b.id===id),j=i+dir;
+      if(i<0||j<0||j>=c.blocks.length)return;
+      const current=c.blocks[c.pos]?.id;
+      [c.blocks[i],c.blocks[j]]=[c.blocks[j],c.blocks[i]];
+      c.pos=Math.max(0,c.blocks.findIndex(b=>b.id===current));
+      save();renderCiclo();
+    }
+    function cicloRemove(id){
+      const c=cicloState(),current=c.blocks[c.pos]?.id;
+      c.blocks=c.blocks.filter(b=>b.id!==id);
+      const k=c.blocks.findIndex(b=>b.id===current);
+      c.pos=k>=0?k:Math.min(c.pos,Math.max(0,c.blocks.length-1));
+      if(current===id)cicloResetTimer(false);
+      save();renderCiclo();
+    }
+    function cicloAdd(){
+      const c=cicloState(),s=state.subjects[0];if(!s)return toast('Cadastre uma disciplina antes de montar o ciclo.');
+      c.blocks.push({id:uid(),subjectId:String(s.id),minutes:60});save();renderCiclo();
+    }
+    function cicloRebuild(btn){
+      if(!cicloResetArmed){cicloResetArmed=true;btn.textContent='Confirmar: recriar ciclo';setTimeout(()=>{cicloResetArmed=false;if(btn.isConnected)btn.textContent='Recriar a partir das disciplinas';},4000);return;}
+      cicloResetArmed=false;const c=cicloState();c.blocks=cicloBuildDefault();c.pos=0;cicloResetTimer(false);save();renderCiclo();toast('Ciclo recriado. O histórico de minutos foi mantido.');
+    }
+
+    /* ---- interface ---- */
+    function cicloInjectDOM(){
+      if($('#ciclo'))return;
+      if(!VALID_TABS.includes('ciclo'))VALID_TABS.push('ciclo');
+      const css=document.createElement('style');css.id='ciclo-css';
+      css.textContent=`
+.ciclo-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.ciclo-grid{grid-template-columns:minmax(0,1fr)}}
+.ciclo-now{display:grid;gap:14px}
+.ciclo-block-name{font-size:clamp(1.6rem,4.5vw,2.3rem);font-weight:900;line-height:1.05;margin:0}
+.ciclo-time{font-size:clamp(2.8rem,9vw,4.2rem);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.ciclo-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ciclo-actions .btn{margin-left:0}
+.ciclo-queue{display:flex;flex-wrap:wrap;gap:6px}
+.ciclo-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.8rem;font-weight:800;background:var(--surface-2);color:var(--muted)}
+.ciclo-chip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.ciclo-chip.on{color:var(--text);border-color:var(--primary);box-shadow:0 0 0 1px var(--primary) inset}
+.ciclo-suggest{border:1px dashed var(--line);border-radius:var(--radius-sm,12px);padding:12px;display:grid;gap:8px}
+.ciclo-suggest select{width:100%;min-width:0}
+.ciclo-check{display:flex;gap:8px;align-items:center;font-size:.9rem}
+.ciclo-exams{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.ciclo-exam{border:1px solid var(--line);border-radius:var(--radius-sm,12px);padding:10px 12px;display:grid;gap:2px;background:var(--surface-2)}
+.ciclo-exam b{font-size:1.35rem;font-variant-numeric:tabular-nums}
+.ciclo-exam.urg b{color:var(--bad)} .ciclo-exam.near b{color:var(--warn)}
+.ciclo-exam small{color:var(--muted)}
+.ciclo-week{display:grid;gap:10px}
+.ciclo-week .progress span{display:block;height:100%}
+.ciclo-week .ok{color:var(--good)}
+.ciclo-table td,.ciclo-table th{white-space:nowrap}
+.ciclo-table select,.ciclo-table input{min-width:0}
+.ciclo-table input[type=number]{width:80px}
+.ciclo-icon{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:8px;min-width:36px;min-height:36px;cursor:pointer;font-weight:900}
+.ciclo-icon:disabled{opacity:.4;cursor:not-allowed}
+.ciclo-log{display:grid;gap:6px;font-size:.9rem}
+.ciclo-log div{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:6px}
+.ciclo-log div:first-child{border-top:0;padding-top:0}
+.ciclo-dash{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.ciclo-dash strong{font-size:1.15rem}
+#cicloDashTime{font-variant-numeric:tabular-nums;font-weight:900;color:var(--primary)}
+`;
+      document.head.appendChild(css);
+
+      const before=document.querySelector('.tab[data-tab="horario"]');
+      const tab=document.createElement('button');
+      tab.className='tab';tab.dataset.tab='ciclo';tab.setAttribute('role','tab');tab.setAttribute('aria-controls','ciclo');tab.setAttribute('aria-selected','false');
+      tab.innerHTML='<span class="ico" aria-hidden="true">⟳</span>Ciclo de estudos';
+      if(before)before.parentNode.insertBefore(tab,before);else document.querySelector('nav.tabs')?.appendChild(tab);
+
+      const panel=document.createElement('section');
+      panel.id='ciclo';panel.className='panel';panel.hidden=true;
+      panel.innerHTML=`
+          <div class="section-head">
+            <div><h2>Ciclo de estudos</h2><p>As disciplinas giram em blocos de tempo, sem dia fixo. Faltou um dia? O ciclo continua de onde parou.</p></div>
+            <span class="badge purple" id="cicloLength">0 blocos</span>
+          </div>
+          <article class="card" style="margin-bottom:16px"><div class="section-head"><div><h2>Contagem para as provas</h2><p>Datas cadastradas em Prioridades/Pré-prova.</p></div></div><div id="cicloExams" class="ciclo-exams"></div></article>
+          <div class="ciclo-grid">
+            <article class="card ciclo-now">
+              <p class="eyebrow" style="color:var(--primary)!important">Próximo bloco</p>
+              <div><h3 class="ciclo-block-name" id="cicloBlockName">—</h3><div class="muted" id="cicloBlockMeta"></div></div>
+              <div class="ciclo-time" id="cicloTime" aria-live="off">00:00</div>
+              <div class="progress"><span id="cicloTimeBar" style="width:0"></span></div>
+              <div class="ciclo-suggest">
+                <div><b id="cicloSuggestKind">Sugestão</b> <span class="muted" id="cicloSuggestWhy"></span></div>
+                <label for="cicloTopic" class="muted">Assunto deste bloco</label>
+                <select id="cicloTopic"></select>
+                <label class="ciclo-check"><input type="checkbox" id="cicloMarkDone"> Marcar o assunto como concluído ao encerrar</label>
+              </div>
+              <div class="ciclo-actions">
+                <button class="btn" id="cicloToggle" type="button">Iniciar</button>
+                <button class="btn soft" id="cicloDone" type="button">Concluir bloco</button>
+                <button class="btn ghost" id="cicloSkip" type="button">Pular</button>
+              </div>
+              <div><p class="muted" style="margin:0 0 6px">Fila do ciclo</p><div class="ciclo-queue" id="cicloQueue"></div></div>
+            </article>
+            <div class="stack">
+              <article class="card"><div class="section-head"><div><h2>Últimos 7 dias</h2><p>Minutos do ciclo contra a meta semanal de cada disciplina.</p></div><span class="badge gray" id="cicloWeekTotal">0 min</span></div><div id="cicloWeek" class="ciclo-week"></div></article>
+              <article class="card"><div class="section-head"><div><h2>Blocos recentes</h2></div></div><div id="cicloLog" class="ciclo-log"></div></article>
+            </div>
+          </div>
+          <article class="card" style="margin-top:16px">
+            <div class="section-head"><div><h2>Montar o ciclo</h2><p>Ordem, disciplina e duração de cada bloco. Disciplinas com mais assuntos pendentes ganham mais blocos; nota da AP1 abaixo de 7 vira bloco de 90 min.</p></div></div>
+            <div class="table-wrap"><table class="ciclo-table" id="cicloTable"></table></div>
+            <div class="filters" style="margin-top:12px">
+              <button class="btn soft" id="cicloAdd" type="button">+ Adicionar bloco</button>
+              <button class="btn ghost" id="cicloRebuild" type="button">Recriar a partir das disciplinas</button>
+            </div>
+          </article>`;
+      const config=document.getElementById('config');
+      if(config)config.parentNode.insertBefore(panel,config);else document.querySelector('main')?.appendChild(panel);
+
+      const dashStack=document.querySelector('#inicio .dashboard-main .stack');
+      if(dashStack){
+        const card=document.createElement('article');card.className='card';card.id='cicloDashCard';
+        card.innerHTML='<div class="ciclo-dash"><div><p class="eyebrow" style="color:var(--primary)!important">Ciclo de estudos</p><strong id="cicloDashName">—</strong><div class="muted" id="cicloDashMeta"></div></div><div style="display:flex;gap:10px;align-items:center"><span id="cicloDashTime"></span><button class="btn small" type="button" data-jump="ciclo">Abrir ciclo</button></div></div>';
+        dashStack.insertBefore(card,dashStack.firstChild);
+      }
+    }
+
+    function cicloBind(){
+      const panel=$('#ciclo');if(!panel||panel.dataset.bound)return;panel.dataset.bound='1';
+      $('#cicloToggle').addEventListener('click',cicloToggleTimer);
+      $('#cicloDone').addEventListener('click',()=>cicloConclude(false));
+      $('#cicloSkip').addEventListener('click',cicloSkip);
+      $('#cicloAdd').addEventListener('click',cicloAdd);
+      $('#cicloRebuild').addEventListener('click',e=>cicloRebuild(e.currentTarget));
+      panel.addEventListener('click',e=>{
+        const btn=e.target.closest('[data-ciclo-act]');if(!btn)return;
+        const id=btn.dataset.id,act=btn.dataset.cicloAct;
+        if(act==='up')cicloMove(id,-1);else if(act==='down')cicloMove(id,1);else if(act==='del')cicloRemove(id);
+        else if(act==='go'){const c=cicloState(),i=c.blocks.findIndex(b=>b.id===id);if(i>=0&&!c.timer.running){c.pos=i;cicloResetTimer(false);save();renderCiclo();}else if(c.timer.running)toast('Pause o cronômetro antes de trocar de bloco.');}
+      });
+      panel.addEventListener('change',e=>{
+        const el=e.target,id=el.dataset.cicloBlock;if(!id)return;
+        const c=cicloState(),b=c.blocks.find(x=>x.id===id);if(!b)return;
+        if(el.dataset.field==='subject')b.subjectId=el.value;
+        if(el.dataset.field==='minutes')b.minutes=Math.max(5,Math.min(240,Math.round(Number(el.value)||60)));
+        if(c.blocks[c.pos]?.id===id&&!c.timer.running)cicloResetTimer(false);
+        save();renderCiclo();
+      });
+    }
+
+    function renderCiclo(){
+      if(!$('#ciclo'))return;
+      if(cicloEnsureBlocks())save();
+      const c=cicloState(),b=c.blocks[c.pos],subject=b?cicloSubject(b.subjectId):null;
+      if(b&&c.timer.blockId!==b.id&&!c.timer.running)cicloResetTimer(false);
+      const color=s=>escapeHtml(s?.color||'var(--primary)');
+
+      $('#cicloLength').textContent=`${c.blocks.length} bloco${c.blocks.length===1?'':'s'} · ${c.blocks.reduce((a,x)=>a+Number(x.minutes||0),0)} min por volta`;
+
+      const exams=state.subjects.filter(s=>cicloTopics(s).length||subjectAssessment(s).exam);
+      $('#cicloExams').innerHTML=exams.length?exams.map(s=>{
+        const d=cicloExamDays(s),exam=subjectAssessment(s).exam;
+        const label=d===null?'sem data':d<0?'já passou':d===0?'hoje':d===1?'amanhã':`${d} dias`;
+        return `<div class="ciclo-exam ${d!==null&&d>=0&&d<=7?'urg':d!==null&&d>=0&&d<=14?'near':''}"><small>${escapeHtml(s.name)}</small><b>${label}</b><small>${exam?fmtDate(exam):'Cadastre a data da prova'}</small></div>`;
+      }).join(''):'<p class="muted">Nenhuma disciplina cadastrada.</p>';
+
+      const sug=cicloSuggest(subject);
+      $('#cicloBlockName').textContent=subject?subject.name:'Monte o seu ciclo';
+      const examDays=subject?cicloExamDays(subject):null;
+      $('#cicloBlockMeta').textContent=b?`${b.minutes} min · ${cicloMinutesWeek(b.subjectId)} de ${Math.round(Number(subject?.goal||0)*60)} min na semana${examDays!==null&&examDays>=0?` · prova em ${examDays} dia(s)`:''}`:'Adicione blocos em "Montar o ciclo".';
+      $('#cicloSuggestKind').textContent=sug?sug.kind:'Sugestão';
+      $('#cicloSuggestWhy').textContent=sug?`· ${sug.why}`:'';
+      const sel=$('#cicloTopic'),prev=sel.dataset.blockId===b?.id?sel.value:null;
+      const topics=subject?cicloTopics(subject):[];
+      sel.innerHTML='<option value="">Sem assunto específico</option>'+topics.map(t=>`<option value="${escapeHtml(t.id)}">${t.done?'✓ ':''}${escapeHtml(t.name)}</option>`).join('');
+      sel.value=prev!==null&&topics.some(t=>t.id===prev)?prev:(sug?.topic?.id||'');
+      sel.dataset.blockId=b?.id||'';
+      $('#cicloToggle').textContent=c.timer.running?'Pausar':(cicloRemaining()<Number(c.timer.total||0)?'Continuar':'Iniciar');
+      ['cicloToggle','cicloDone','cicloSkip'].forEach(id=>$('#'+id).disabled=!b);
+
+      $('#cicloQueue').innerHTML=c.blocks.map((x,i)=>{const s=cicloSubject(x.subjectId);return `<button type="button" class="ciclo-chip ${i===c.pos?'on':''}" data-ciclo-act="go" data-id="${x.id}" title="Ir para este bloco"><i style="background:${color(s)}"></i>${escapeHtml(s?.name||'?')} · ${x.minutes}′</button>`;}).join('');
+
+      const inCycle=[...new Set(c.blocks.map(x=>String(x.subjectId)))].map(cicloSubject).filter(Boolean);
+      let weekTotal=0;
+      $('#cicloWeek').innerHTML=inCycle.length?inCycle.map(s=>{
+        const m=cicloMinutesWeek(s.id),goal=Math.round(Number(s.goal||0)*60);weekTotal+=m;
+        const pct=goal?Math.min(100,Math.round(m/goal*100)):0;
+        return `<div class="bar-item"><div class="bar-head"><span>${escapeHtml(s.name)}</span><span class="${goal&&m>=goal?'ok':''}">${m} / ${goal} min</span></div><div class="progress"><span style="width:${pct}%;background:${color(s)}"></span></div></div>`;
+      }).join(''):'<p class="muted">Os minutos aparecem aqui quando você concluir o primeiro bloco.</p>';
+      $('#cicloWeekTotal').textContent=`${Math.floor(weekTotal/60)}h${String(weekTotal%60).padStart(2,'0')}`;
+
+      const recent=[...c.log].reverse().slice(0,8);
+      $('#cicloLog').innerHTML=recent.length?recent.map(l=>{const s=cicloSubject(l.subjectId);return `<div><span>${escapeHtml(s?.name||'Disciplina removida')}${l.topic?` <span class="muted">· ${escapeHtml(l.topic)}</span>`:''}</span><span class="muted">${fmtDate(l.date)} · ${l.minutes} min</span></div>`;}).join(''):'<p class="muted">Nenhum bloco concluído ainda.</p>';
+
+      const opts=sid=>state.subjects.map(s=>`<option value="${escapeHtml(s.id)}" ${String(s.id)===String(sid)?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
+      $('#cicloTable').innerHTML=`<thead><tr><th>#</th><th>Disciplina</th><th>Minutos</th><th>Ordem</th><th></th></tr></thead><tbody>${c.blocks.map((x,i)=>`<tr><td>${i+1}${i===c.pos?' ▶':''}</td><td><select id="cicloSub-${x.id}" data-ciclo-block="${x.id}" data-field="subject" aria-label="Disciplina do bloco ${i+1}">${opts(x.subjectId)}</select></td><td><input id="cicloMin-${x.id}" type="number" min="5" max="240" step="5" value="${x.minutes}" data-ciclo-block="${x.id}" data-field="minutes" aria-label="Minutos do bloco ${i+1}"></td><td><button class="ciclo-icon" type="button" data-ciclo-act="up" data-id="${x.id}" ${i===0?'disabled':''} aria-label="Subir">↑</button> <button class="ciclo-icon" type="button" data-ciclo-act="down" data-id="${x.id}" ${i===c.blocks.length-1?'disabled':''} aria-label="Descer">↓</button></td><td><button class="ciclo-icon" type="button" data-ciclo-act="del" data-id="${x.id}" aria-label="Remover bloco">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">Nenhum bloco. Use “Recriar a partir das disciplinas”.</td></tr>'}</tbody>`;
+
+      if($('#cicloDashName')){
+        $('#cicloDashName').textContent=subject?`${subject.name} · ${b.minutes} min`:'Monte o seu ciclo';
+        $('#cicloDashMeta').textContent=sug?.topic?`${sug.kind}: ${sug.topic.name}`:(sug?`${sug.kind}`:'');
+      }
+      cicloTick();
+    }
+
+    const renderAllBeforeCiclo=renderAll;
+    renderAll=function(){const result=renderAllBeforeCiclo.apply(this,arguments);renderCiclo();return result;};
+
+    const initBeforeCiclo=init;
+    init=function(){
+      cicloInjectDOM();
+      const result=initBeforeCiclo();
+      cicloBind();
+      renderCiclo();
+      startCicloClock();
+      return result;
+    };
+

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#6d28d9">
+  <title>MEDCID · Teste do ciclo</title>
+  <style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui;background:#070a13;color:#f8fafc}main{padding:28px;text-align:center}small{color:#aab5c8}</style>
+</head>
+<body>
+<main id="boot"><strong>MEDCID</strong><br><small>Carregando…</small></main>
+<script>
+(async()=>{
+  const ref='v8-ciclo-20261012';
+  const [loaderRes,baseRes,aRes,bRes,cRes,dRes,eRes]=await Promise.all([
+    fetch('./loader-v5.html?ref='+ref,{cache:'no-store'}),
+    fetch('./app-base-v4.html?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v6-a.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v6-b.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v6-c.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v7-ap2.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v8-ciclo.txt?ref='+ref,{cache:'no-store'})
+  ]);
+  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok||!dRes.ok||!eRes.ok) throw new Error('Falha ao carregar arquivos da v8.');
+  const loader=await loaderRes.text();
+  const p0=loader.indexOf('const p='),p1=loader.indexOf(',f=[];',p0);
+  if(p0<0||p1<0) throw new Error('Não foi possível recuperar os patches v5.');
+  const patches=JSON.parse(loader.slice(p0+8,p1));
+  let s=await baseRes.text();
+  for(let i=0;i<patches.length;i++){
+    const [from,to]=patches[i],x=s.indexOf(from),y=x<0?-1:s.indexOf(from,x+from.length);
+    if(x<0||y>=0) throw new Error('Patch v5 '+(i+1)+' incompatível.');
+    s=s.replace(from,to);
+  }
+  s=s.replace('    const CURRENT_DATA_VERSION = 5;\n','    const CURRENT_DATA_VERSION = 7;\n');
+  const hook='    window.completeReview=completeReview; window.rebalanceReviewBacklog=rebalanceReviewBacklog; window.editReviewGroup=editReviewGroup;';
+  const override=(await aRes.text())+(await bRes.text())+(await cRes.text())+(await dRes.text())+(await eRes.text());
+  const hx=s.indexOf(hook);
+  if(hx<0) throw new Error('Ponto de injeção v6 não encontrado.');
+  s=s.slice(0,hx)+override+s.slice(hx);
+  const tema='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap"><link rel="stylesheet" href="./tema-batcomputador.css?ref='+ref+'"><script src="./tema-batcomputador.js?ref='+ref+'"><\/script>';
+  s=s.includes('</head>')?s.replace('</head>',tema+'</head>'):tema+s;
+  document.open();document.write(s);document.close();
+})().catch(err=>{
+  console.error(err);
+  document.getElementById('boot').innerHTML='<strong>Falha ao carregar o MEDCID.</strong><br><small>Atualize a página. Se persistir, restaure o backup anterior.</small>';
+});
+</script>
+</body>
+</html>
