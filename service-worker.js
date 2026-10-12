@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medcid-learning-os-v14';
+const CACHE_NAME = 'medcid-learning-os-v15';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './override-v6-b.txt',
   './override-v6-c.txt',
   './override-v7-ap2.txt',
+  './override-v8-ciclo.txt',
   './tema-batcomputador.css',
   './tema-batcomputador.js',
   './manifest.json',
