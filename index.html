@@ -11,7 +11,7 @@
 <main id="boot"><strong>MEDCID</strong><br><small>Carregando…</small></main>
 <script>
 (async()=>{
-  const ref='v8-ciclo-20261012';
+  const ref='v8-musica-20261017';
   const [loaderRes,baseRes,aRes,bRes,cRes,dRes,eRes]=await Promise.all([
     fetch('./loader-v5.html?ref='+ref,{cache:'no-store'}),
     fetch('./app-base-v4.html?ref='+ref,{cache:'no-store'}),
@@ -38,7 +38,7 @@
   const hx=s.indexOf(hook);
   if(hx<0) throw new Error('Ponto de injeção v6 não encontrado.');
   s=s.slice(0,hx)+override+s.slice(hx);
-  const tema='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap"><link rel="stylesheet" href="./tema-batcomputador.css?ref='+ref+'"><script src="./tema-batcomputador.js?ref='+ref+'"><\/script>';
+  const tema='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap"><link rel="stylesheet" href="./tema-batcomputador.css?ref='+ref+'"><link rel="stylesheet" href="./musica-medcid.css?ref='+ref+'"><script src="./tema-batcomputador.js?ref='+ref+'"><\/script><script src="./musica-medcid.js?ref='+ref+'"><\/script>';
   s=s.includes('</head>')?s.replace('</head>',tema+'</head>'):tema+s;
   document.open();document.write(s);document.close();
 })().catch(err=>{
