@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medcid-learning-os-v16';
+const CACHE_NAME = 'medcid-learning-os-v17';
 const ASSETS = [
   './',
   './index.html',
