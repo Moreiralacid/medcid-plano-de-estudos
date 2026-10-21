@@ -11,17 +11,18 @@
 <main id="boot"><strong>MEDCID</strong><br><small>Carregando…</small></main>
 <script>
 (async()=>{
-  const ref='v8-pulso-noturno-20261017';
-  const [loaderRes,baseRes,aRes,bRes,cRes,dRes,eRes]=await Promise.all([
+  const ref='v9-central-20261021';
+  const [loaderRes,baseRes,aRes,bRes,cRes,dRes,eRes,fRes]=await Promise.all([
     fetch('./loader-v5.html?ref='+ref,{cache:'no-store'}),
     fetch('./app-base-v4.html?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-a.txt?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-b.txt?ref='+ref,{cache:'no-store'}),
     fetch('./override-v6-c.txt?ref='+ref,{cache:'no-store'}),
     fetch('./override-v7-ap2.txt?ref='+ref,{cache:'no-store'}),
-    fetch('./override-v8-ciclo.txt?ref='+ref,{cache:'no-store'})
+    fetch('./override-v8-ciclo.txt?ref='+ref,{cache:'no-store'}),
+    fetch('./override-v9-central.txt?ref='+ref,{cache:'no-store'})
   ]);
-  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok||!dRes.ok||!eRes.ok) throw new Error('Falha ao carregar arquivos da v8.');
+  if(!loaderRes.ok||!baseRes.ok||!aRes.ok||!bRes.ok||!cRes.ok||!dRes.ok||!eRes.ok||!fRes.ok) throw new Error('Falha ao carregar arquivos da v9.');
   const loader=await loaderRes.text();
   const p0=loader.indexOf('const p='),p1=loader.indexOf(',f=[];',p0);
   if(p0<0||p1<0) throw new Error('Não foi possível recuperar os patches v5.');
@@ -34,7 +35,7 @@
   }
   s=s.replace('    const CURRENT_DATA_VERSION = 5;\n','    const CURRENT_DATA_VERSION = 7;\n');
   const hook='    window.completeReview=completeReview; window.rebalanceReviewBacklog=rebalanceReviewBacklog; window.editReviewGroup=editReviewGroup;';
-  const override=(await aRes.text())+(await bRes.text())+(await cRes.text())+(await dRes.text())+(await eRes.text());
+  const override=(await aRes.text())+(await bRes.text())+(await cRes.text())+(await dRes.text())+(await eRes.text())+(await fRes.text());
   const hx=s.indexOf(hook);
   if(hx<0) throw new Error('Ponto de injeção v6 não encontrado.');
   s=s.slice(0,hx)+override+s.slice(hx);
