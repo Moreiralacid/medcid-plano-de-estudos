@@ -1,0 +1,246 @@
+/* ===== MEDCID v10 — Roadmap Visual =====
+   Camada visual não destrutiva sobre o Learning Map da v9. */
+(function(){
+  const V10='2026-10-21.1', UI_KEY='medcid_roadmap_ui_v1';
+  let ui={mode:'map',zoom:.82,x:20,y:20,expanded:[]},drag=null;
+
+  function n(s){return normalize(s||'');}
+  function examDate(s){try{return subjectAssessment(s)?.exam||'';}catch(e){return '';}}
+  function examDays(s){const d=examDate(s);return d?diffDays(d):null;}
+  function qstats(subject,topic){
+    const rows=(state.questions||[]).filter(q=>n(q.subject)===n(subject)&&(!topic||n(q.topic)===n(topic)));
+    const total=rows.reduce((a,q)=>a+Number(q.total||0),0),correct=rows.reduce((a,q)=>a+Number(q.correct||0),0);
+    return {total,correct,rate:total?Math.round(correct/total*100):null};
+  }
+  function errors(subject,topic){
+    return (state.recovery?.errors||[]).filter(e=>!/corrigido/i.test(String(e.status||''))&&(!subject||n(e.subject)===n(subject))&&(!topic||n(e.topic)===n(topic))).length;
+  }
+  function overdue(subject,topic){
+    return (state.reviews||[]).flatMap(r=>(r.items||[]).map(i=>({r,i}))).filter(x=>!x.i.done&&x.i.date<todayISO()&&(!subject||n(x.r.subject)===n(subject))&&(!topic||n(x.r.topic)===n(topic))).length;
+  }
+  function status(s,t){
+    const q=qstats(s.name,t.name),er=errors(s.name,t.name),late=overdue(s.name,t.name);
+    if(er||(q.rate!==null&&q.rate<60))return {key:'critical',label:'Recuperar',icon:'!'};
+    if(late||(q.rate!==null&&q.rate<75))return {key:'review',label:'Revisar',icon:'↻'};
+    if(t.done)return {key:'mastered',label:'Dominado',icon:'✓'};
+    return {key:'pending',label:'Não iniciado',icon:'•'};
+  }
+  function priority(s){
+    const days=examDays(s),topics=s.topics||[],pending=topics.filter(t=>!t.done).length,q=qstats(s.name),er=errors(s.name),late=overdue(s.name);
+    let score=(days===null?5:days<0?0:days<=3?35:days<=7?31:days<=14?25:days<=30?17:9)
+      +(q.rate===null?6:Math.max(0,Math.round((80-q.rate)*.45)))
+      +(topics.length?Math.round(pending/topics.length*15):4)
+      +Math.min(16,er*5)+Math.min(14,late*4)+Math.min(10,Math.max(1,Number(s.weight||1)));
+    return Math.min(100,score);
+  }
+  function ranked(){return [...(state.subjects||[])].sort((a,b)=>priority(b)-priority(a));}
+  function loadUI(){try{ui={...ui,...JSON.parse(localStorage.getItem(UI_KEY)||'{}')};if(!Array.isArray(ui.expanded))ui.expanded=[];}catch(e){}}
+  function saveUI(){try{localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch(e){}}
+  function escAttr(s){return escapeHtml(s).replace(/'/g,'&#39;');}
+  function subjectState(s){
+    const topics=s.topics||[],ss=topics.map(t=>status(s,t));
+    if(ss.some(x=>x.key==='critical'))return 'critical';
+    if(ss.some(x=>x.key==='review'))return 'review';
+    if(topics.length&&ss.every(x=>x.key==='mastered'))return 'mastered';
+    return 'pending';
+  }
+  function subjectSummary(s){
+    const topics=s.topics||[],done=topics.filter(t=>t.done).length,score=priority(s),days=examDays(s),qs=qstats(s.name);
+    return {topics,done,pct:topics.length?Math.round(done/topics.length*100):0,score,days,rate:qs.rate};
+  }
+
+  function css(){
+    if(document.getElementById('medcidV10Styles'))return;
+    const st=document.createElement('style');st.id='medcidV10Styles';st.textContent=`
+      #learningmap .v9-map-grid{display:none!important}
+      .v10-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+      .v10-toolbar-left,.v10-toolbar-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+      .v10-seg{display:flex;border:1px solid var(--line);background:var(--surface);padding:3px}
+      .v10-seg button{min-height:36px;border:0;background:transparent;color:var(--muted);padding:7px 11px;font-weight:900}
+      .v10-seg button.on{background:rgba(0,243,255,.11);color:var(--text);box-shadow:inset 0 0 0 1px rgba(0,243,255,.35)}
+      .v10-map-shell{position:relative;height:min(72vh,760px);min-height:560px;overflow:hidden;border:1px solid var(--line);background:
+        radial-gradient(circle at 50% 0,rgba(0,243,255,.07),transparent 34%),
+        radial-gradient(circle at 85% 45%,rgba(47,255,168,.035),transparent 28%),
+        linear-gradient(rgba(112,162,168,.11) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(112,162,168,.11) 1px,transparent 1px),
+        #020912;background-size:auto,auto,24px 24px,24px 24px;cursor:grab;touch-action:none}
+      .v10-map-shell.dragging{cursor:grabbing}
+      .v10-world{position:absolute;left:0;top:0;width:1840px;min-height:1000px;transform-origin:0 0;will-change:transform}
+      .v10-lines{position:absolute;inset:0;overflow:visible;pointer-events:none}
+      .v10-line{fill:none;stroke:rgba(112,162,168,.56);stroke-width:2.2;vector-effect:non-scaling-stroke}
+      .v10-line.core{stroke:#00f3ff;stroke-width:3}.v10-line.goal{stroke:#2fffa8;stroke-dasharray:8 7}.v10-line.topic{stroke:rgba(112,162,168,.42);stroke-dasharray:5 5}
+      .v10-node{position:absolute;width:250px;min-height:96px;padding:13px 14px;background:rgba(8,20,26,.96);border:1px solid rgba(112,162,168,.38);box-shadow:0 15px 42px rgba(0,0,0,.38);color:var(--text);user-select:none}
+      .v10-node:before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:4px;background:var(--node-color,#00f3ff)}
+      .v10-node.objective{width:260px;border-color:rgba(47,255,168,.55);background:linear-gradient(135deg,rgba(47,255,168,.09),rgba(8,20,26,.96));--node-color:#2fffa8}
+      .v10-node.period{width:220px;--node-color:#70a2a8}.v10-node.ap2{width:220px;border-color:rgba(0,243,255,.55);--node-color:#00f3ff}
+      .v10-node.subject{width:270px;cursor:pointer;transition:.16s ease}.v10-node.subject:hover{transform:translateY(-2px);border-color:var(--node-color)}
+      .v10-node.topic{width:270px;min-height:70px;padding:10px 12px}.v10-node.exam{width:205px;min-height:76px;--node-color:#ff9d2e;border-color:rgba(255,157,46,.48)}
+      .v10-node.critical{--node-color:#ff3b4e}.v10-node.review{--node-color:#ffd23e}.v10-node.mastered{--node-color:#2fffa8}.v10-node.pending{--node-color:#70a2a8}
+      .v10-kicker{font-family:"Share Tech Mono",monospace;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--node-color);font-weight:900}
+      .v10-node h3{margin:5px 0 4px;font-size:.98rem}.v10-node p{margin:0;color:var(--muted);font-size:.72rem;line-height:1.35}
+      .v10-node-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.v10-score{font-family:Orbitron,sans-serif;color:var(--node-color);font-size:1rem}
+      .v10-progress{height:5px;margin:9px 0 4px;background:#020912;border:1px solid rgba(112,162,168,.25)}.v10-progress span{display:block;height:100%;background:var(--node-color);width:0}
+      .v10-chevron{position:absolute;right:9px;bottom:7px;color:var(--muted);font-size:.7rem}
+      .v10-map-legend{position:absolute;left:12px;bottom:12px;z-index:4;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 24px);pointer-events:none}
+      .v10-legend{padding:5px 7px;background:rgba(2,9,18,.86);border:1px solid var(--line);font-size:.62rem;color:var(--muted)}.v10-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+      .v10-list{display:grid;gap:12px}.v10-list-subject{border:1px solid var(--line);background:var(--surface);padding:14px}.v10-list-head{display:grid;grid-template-columns:1fr auto;gap:12px}.v10-list-topics{display:grid;gap:7px;margin-top:10px}.v10-list-topic{display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);background:var(--surface-2)}.v10-list-topic i{width:10px;height:10px;border-radius:50%}
+      .v10-mini{font-size:.66rem;color:var(--muted);font-weight:800}.v10-hidden{display:none!important}
+      @media(max-width:720px){.v10-map-shell{height:68vh;min-height:480px}.v10-toolbar{align-items:flex-start}.v10-toolbar-right{width:100%}.v10-world{width:1740px}.v10-node{font-size:.9rem}}
+    `;document.head.appendChild(st);
+  }
+
+  function replaceMapShell(){
+    const panel=document.getElementById('learningmap');if(!panel)return;
+    const old=panel.querySelector('#v10RoadmapRoot');if(old)return;
+    const grid=panel.querySelector('#v9MapGrid');
+    if(!grid)return;
+    const root=document.createElement('div');root.id='v10RoadmapRoot';root.innerHTML=`
+      <div class="v10-toolbar">
+        <div class="v10-toolbar-left">
+          <div class="v10-seg" role="group" aria-label="Modo de visualização"><button id="v10ModeMap" type="button">Mapa</button><button id="v10ModeList" type="button">Lista</button></div>
+          <span class="badge gray" id="v10RoadmapHint">Clique em uma disciplina para abrir os tópicos</span>
+        </div>
+        <div class="v10-toolbar-right">
+          <button class="btn small ghost" id="v10Collapse" type="button">Recolher</button>
+          <button class="btn small ghost" id="v10Expand" type="button">Expandir tudo</button>
+          <button class="btn small ghost" id="v10ZoomOut" type="button" aria-label="Diminuir zoom">−</button>
+          <span class="badge gray" id="v10ZoomLabel">82%</span>
+          <button class="btn small ghost" id="v10ZoomIn" type="button" aria-label="Aumentar zoom">+</button>
+          <button class="btn small soft" id="v10ResetView" type="button">Centralizar</button>
+        </div>
+      </div>
+      <div id="v10MapView">
+        <div class="v10-map-shell" id="v10Viewport">
+          <div class="v10-world" id="v10World"><svg class="v10-lines" id="v10Lines"></svg><div id="v10Nodes"></div></div>
+          <div class="v10-map-legend"><span class="v10-legend"><i style="background:#2fffa8"></i>Dominado</span><span class="v10-legend"><i style="background:#ffd23e"></i>Revisar</span><span class="v10-legend"><i style="background:#ff3b4e"></i>Recuperar</span><span class="v10-legend"><i style="background:#70a2a8"></i>Não iniciado</span></div>
+        </div>
+      </div>
+      <div id="v10ListView" class="v10-list v10-hidden"></div>`;
+    grid.parentNode.insertBefore(root,grid);
+    grid.style.display='none';
+    const title=panel.querySelector('.v9-map-head h2');if(title)title.textContent='MEDCID Roadmap';
+    const desc=panel.querySelector('.v9-map-head p:last-child');if(desc)desc.textContent='Do objetivo final aos tópicos da AP2, com domínio, revisões, erros e provas conectados.';
+    const badge=panel.querySelector('.v9-map-head .badge');if(badge)badge.textContent='v10 · roadmap visual';
+  }
+
+  function nodeHTML(cls,x,y,title,kicker,body,extra,color){
+    return `<div class="v10-node ${cls}" style="left:${x}px;top:${y}px;--node-color:${color||'#00f3ff'}">${extra||''}<div class="v10-kicker">${kicker}</div><h3>${escapeHtml(title)}</h3>${body?`<p>${body}</p>`:''}</div>`;
+  }
+  function path(x1,y1,x2,y2,cls){
+    const mid=x1+(x2-x1)*.5;
+    return `<path class="v10-line ${cls||''}" d="M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}"/>`;
+  }
+
+  function layout(){
+    const subjects=ranked(),expanded=new Set(ui.expanded.map(String)),nodes=[],lines=[];
+    const root={x:50,y:38,w:260,h:98},period={x:350,y:38,w:220,h:98},ap2={x:650,y:38,w:220,h:98};
+    nodes.push(nodeHTML('objective',root.x,root.y,'Formatura em Medicina','OBJETIVO','Meta acadêmica de longo prazo','','#2fffa8'));
+    nodes.push(nodeHTML('period',period.x,period.y,state.config?.cycleName||'6º período','ETAPA','Ciclo acadêmico atual','','#70a2a8'));
+    nodes.push(nodeHTML('ap2',ap2.x,ap2.y,'AP2','AVALIAÇÃO','Mapa adaptativo das disciplinas','','#00f3ff'));
+    lines.push(path(root.x+root.w,root.y+49,period.x,period.y+49,'goal'),path(period.x+period.w,period.y+49,ap2.x,ap2.y+49,'core'));
+
+    let cursor=175,maxY=900;
+    subjects.forEach((s,idx)=>{
+      const sum=subjectSummary(s),isOpen=expanded.has(String(s.id)),topicCount=sum.topics.length;
+      const branchHeight=isOpen?Math.max(150,topicCount*82):128;
+      const sy=cursor+Math.max(0,(branchHeight-104)/2),sx=960,sw=270,sh=104;
+      const ss=subjectState(s),dayText=sum.days===null?'Sem data de prova':sum.days<0?'Prova realizada':sum.days===0?'Prova hoje':`Prova em ${sum.days} dia(s)`;
+      const qText=sum.rate===null?'sem questões':sum.rate+'% questões';
+      const extra=`<div class="v10-node-top"><span></span><span class="v10-score">${sum.score}</span></div><div class="v10-progress"><span style="width:${sum.pct}%"></span></div><div class="v10-chevron">${isOpen?'▾ tópicos':'▸ abrir tópicos'}</div>`;
+      nodes.push(`<button type="button" class="v10-node subject ${ss}" data-v10-subject="${escAttr(String(s.id))}" style="left:${sx}px;top:${sy}px;--node-color:${escapeHtml(s.color||'#00f3ff')};text-align:left"><div class="v10-node-top"><div><div class="v10-kicker">DISCIPLINA · ${dayText}</div><h3>${escapeHtml(s.name)}</h3></div><span class="v10-score">${sum.score}</span></div><p>${sum.done}/${sum.topics.length} concluídos · ${qText}</p><div class="v10-progress"><span style="width:${sum.pct}%"></span></div><div class="v10-chevron">${isOpen?'▾ tópicos':'▸ abrir tópicos'}</div></button>`);
+      const ap2Y=ap2.y+49, subjectY=sy+52;
+      lines.push(path(ap2.x+ap2.w,ap2Y,sx,subjectY,'core'));
+
+      let examX=isOpen?1580:1315,examY=sy+14;
+      const exam=examDate(s),examBody=exam?fmtDate(exam):'Data ainda não confirmada';
+      nodes.push(nodeHTML('exam',examX,examY,'Prova '+s.name,'MARCO',examBody,'','#ff9d2e'));
+      lines.push(path(sx+sw,subjectY,examX,examY+38,'goal'));
+
+      if(isOpen&&topicCount){
+        const tx=1280,tw=270;
+        sum.topics.forEach((t,j)=>{
+          const ty=cursor+j*82,st=status(s,t),qs=qstats(s.name,t.name),er=errors(s.name,t.name),late=overdue(s.name,t.name);
+          const meta=[qs.rate!==null?qs.rate+'% questões':null,er?er+' erro(s)':null,late?late+' revisão(ões) atrasada(s)':null].filter(Boolean).join(' · ')||String(t.heat||'sem desempenho registrado');
+          nodes.push(nodeHTML('topic '+st.key,tx,ty,t.name,st.label.toUpperCase(),escapeHtml(meta),'',st.key==='critical'?'#ff3b4e':st.key==='review'?'#ffd23e':st.key==='mastered'?'#2fffa8':'#70a2a8'));
+          lines.push(path(sx+sw,subjectY,tx,ty+35,'topic'));
+        });
+      }
+      cursor+=branchHeight+42;maxY=Math.max(maxY,cursor+80);
+    });
+    return {nodes:nodes.join(''),lines:lines.join(''),height:maxY};
+  }
+
+  function applyTransform(){
+    const w=document.getElementById('v10World');if(!w)return;
+    w.style.transform=`translate(${ui.x}px,${ui.y}px) scale(${ui.zoom})`;
+    const l=document.getElementById('v10ZoomLabel');if(l)l.textContent=Math.round(ui.zoom*100)+'%';
+  }
+  function renderMap(){
+    const nodes=document.getElementById('v10Nodes'),svg=document.getElementById('v10Lines'),world=document.getElementById('v10World');if(!nodes||!svg||!world)return;
+    const l=layout();nodes.innerHTML=l.nodes;svg.innerHTML=l.lines;svg.setAttribute('width','1840');svg.setAttribute('height',String(l.height));svg.setAttribute('viewBox',`0 0 1840 ${l.height}`);world.style.height=l.height+'px';
+    applyTransform();
+    nodes.querySelectorAll('[data-v10-subject]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();toggleSubject(btn.dataset.v10Subject);}));
+  }
+  function renderList(){
+    const box=document.getElementById('v10ListView');if(!box)return;
+    box.innerHTML=ranked().map(s=>{
+      const sum=subjectSummary(s),days=sum.days===null?'sem prova confirmada':sum.days<0?'prova realizada':`D-${sum.days}`;
+      return `<article class="v10-list-subject"><div class="v10-list-head"><div><div class="v10-kicker">${days}</div><h3>${escapeHtml(s.name)}</h3><span class="v10-mini">${sum.done}/${sum.topics.length} concluídos · prioridade ${sum.score}/100</span></div><span class="v10-score">${sum.pct}%</span></div><div class="v10-list-topics">${sum.topics.length?sum.topics.map(t=>{const st=status(s,t),qs=qstats(s.name,t.name);const col=st.key==='critical'?'#ff3b4e':st.key==='review'?'#ffd23e':st.key==='mastered'?'#2fffa8':'#70a2a8';return `<div class="v10-list-topic"><i style="background:${col}"></i><div><b>${escapeHtml(t.name)}</b><span class="v10-mini" style="display:block">${qs.rate!==null?qs.rate+'% em questões':escapeHtml(t.heat||'sem questões')}</span></div><span class="v10-mini">${st.label}</span></div>`;}).join(''):'<div class="v9-empty">Conteúdo ainda não cadastrado.</div>'}</div></article>`;
+    }).join('')||'<div class="v9-empty">Nenhuma disciplina cadastrada.</div>';
+  }
+  function render(){
+    const root=document.getElementById('v10RoadmapRoot');if(!root)return;
+    if(!ui.expanded.length){
+      const top=ranked()[0];if(top)ui.expanded=[String(top.id)];
+    }
+    const map=document.getElementById('v10MapView'),list=document.getElementById('v10ListView');
+    map.classList.toggle('v10-hidden',ui.mode!=='map');list.classList.toggle('v10-hidden',ui.mode!=='list');
+    document.getElementById('v10ModeMap')?.classList.toggle('on',ui.mode==='map');
+    document.getElementById('v10ModeList')?.classList.toggle('on',ui.mode==='list');
+    document.getElementById('v10ZoomOut').disabled=ui.mode!=='map';document.getElementById('v10ZoomIn').disabled=ui.mode!=='map';document.getElementById('v10ResetView').disabled=ui.mode!=='map';
+    renderMap();renderList();saveUI();
+  }
+  function toggleSubject(id){
+    const set=new Set(ui.expanded.map(String));set.has(String(id))?set.delete(String(id)):set.add(String(id));ui.expanded=[...set];render();
+  }
+  function setZoom(z,center){
+    const vp=document.getElementById('v10Viewport');if(!vp)return;
+    const old=ui.zoom,newZ=Math.max(.35,Math.min(1.45,z));
+    if(center){
+      const rect=vp.getBoundingClientRect(),cx=rect.width/2,cy=rect.height/2;
+      ui.x=cx-(cx-ui.x)*(newZ/old);ui.y=cy-(cy-ui.y)*(newZ/old);
+    }
+    ui.zoom=newZ;applyTransform();saveUI();
+  }
+  function resetView(){
+    const vp=document.getElementById('v10Viewport');if(!vp)return;
+    ui.zoom=window.innerWidth<720?.52:.82;ui.x=18;ui.y=18;applyTransform();saveUI();
+  }
+  function bind(){
+    const root=document.getElementById('v10RoadmapRoot');if(!root||root.dataset.bound)return;root.dataset.bound='1';
+    document.getElementById('v10ModeMap').onclick=()=>{ui.mode='map';render();};
+    document.getElementById('v10ModeList').onclick=()=>{ui.mode='list';render();};
+    document.getElementById('v10ZoomIn').onclick=()=>setZoom(ui.zoom+.12,true);
+    document.getElementById('v10ZoomOut').onclick=()=>setZoom(ui.zoom-.12,true);
+    document.getElementById('v10ResetView').onclick=resetView;
+    document.getElementById('v10Collapse').onclick=()=>{ui.expanded=[];const top=ranked()[0];if(top)ui.expanded=[String(top.id)];render();};
+    document.getElementById('v10Expand').onclick=()=>{ui.expanded=(state.subjects||[]).map(s=>String(s.id));render();};
+    const vp=document.getElementById('v10Viewport');
+    vp.addEventListener('pointerdown',e=>{if(e.target.closest('.v10-node'))return;drag={sx:e.clientX,sy:e.clientY,x:ui.x,y:ui.y};vp.setPointerCapture(e.pointerId);vp.classList.add('dragging');});
+    vp.addEventListener('pointermove',e=>{if(!drag)return;ui.x=drag.x+(e.clientX-drag.sx);ui.y=drag.y+(e.clientY-drag.sy);applyTransform();});
+    vp.addEventListener('pointerup',e=>{if(!drag)return;drag=null;vp.classList.remove('dragging');saveUI();try{vp.releasePointerCapture(e.pointerId)}catch(_){}});
+    vp.addEventListener('pointercancel',()=>{drag=null;vp.classList.remove('dragging');saveUI();});
+    vp.addEventListener('wheel',e=>{e.preventDefault();const rect=vp.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top,old=ui.zoom,newZ=Math.max(.35,Math.min(1.45,old*(e.deltaY<0?1.08:.92)));ui.x=mx-(mx-ui.x)*(newZ/old);ui.y=my-(my-ui.y)*(newZ/old);ui.zoom=newZ;applyTransform();saveUI();},{passive:false});
+  }
+
+  function boot(){
+    loadUI();css();replaceMapShell();bind();render();
+    const tab=document.querySelector('.tab[data-tab="learningmap"]');if(tab){const text=[...tab.childNodes].find(x=>x.nodeType===Node.TEXT_NODE);if(text)text.textContent=' Roadmap';}
+  }
+
+  const prevRender=renderAll;
+  renderAll=function(){const r=prevRender.apply(this,arguments);if(document.getElementById('v10RoadmapRoot'))render();return r;};
+
+  const prevInit=init;
+  init=function(){const r=prevInit.apply(this,arguments);boot();try{state.medcidV10={version:V10,activatedAt:state.medcidV10?.activatedAt||new Date().toISOString()};save();}catch(e){}return r;};
+})();
