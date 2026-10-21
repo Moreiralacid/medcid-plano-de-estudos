@@ -2,7 +2,7 @@
    Camada visual não destrutiva sobre o Learning Map da v9. */
 (function(){
   const V10='2026-10-21.1', UI_KEY='medcid_roadmap_ui_v1';
-  let ui={mode:'map',zoom:.82,x:20,y:20,expanded:[]},drag=null;
+  let ui={mode:'map',zoom:.82,x:20,y:20,expanded:[],initialized:false},drag=null;
 
   function n(s){return normalize(s||'');}
   function examDate(s){try{return subjectAssessment(s)?.exam||'';}catch(e){return '';}}
@@ -190,8 +190,9 @@
   }
   function render(){
     const root=document.getElementById('v10RoadmapRoot');if(!root)return;
-    if(!ui.expanded.length){
+    if(!ui.initialized){
       const top=ranked()[0];if(top)ui.expanded=[String(top.id)];
+      ui.initialized=true;
     }
     const map=document.getElementById('v10MapView'),list=document.getElementById('v10ListView');
     map.classList.toggle('v10-hidden',ui.mode!=='map');list.classList.toggle('v10-hidden',ui.mode!=='list');
