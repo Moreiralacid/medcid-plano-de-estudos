@@ -1,0 +1,198 @@
+/* ===== MEDCID v9 — Central Inteligente =====
+   Camada não destrutiva: usa subjects, schedule, reviews, tasks, questions e recovery já existentes. */
+(function(){
+  const V9='2026-10-21.1';
+  if(!VALID_TABS.includes('learningmap')) VALID_TABS.push('learningmap');
+  if(!VALID_TABS.includes('agenda')) VALID_TABS.push('agenda');
+
+  function v9Norm(s){return normalize(s||'');}
+  function v9SubjectExam(s){
+    try{return subjectAssessment(s)?.exam||'';}catch(e){return '';}
+  }
+  function v9ExamDays(s){
+    const exam=v9SubjectExam(s); if(!exam)return null;
+    return diffDays(exam);
+  }
+  function v9QuestionStats(subjectName,topicName){
+    const rows=(state.questions||[]).filter(q=>v9Norm(q.subject)===v9Norm(subjectName) && (!topicName||v9Norm(q.topic)===v9Norm(topicName)));
+    const total=rows.reduce((a,q)=>a+Number(q.total||0),0), correct=rows.reduce((a,q)=>a+Number(q.correct||0),0);
+    return {total,correct,rate:total?Math.round(correct/total*100):null};
+  }
+  function v9OpenErrors(subjectName,topicName){
+    return (state.recovery?.errors||[]).filter(e=>{
+      const open=!/corrigido/i.test(String(e.status||''));
+      const sameS=!subjectName||v9Norm(e.subject)===v9Norm(subjectName);
+      const sameT=!topicName||v9Norm(e.topic)===v9Norm(topicName);
+      return open&&sameS&&sameT;
+    });
+  }
+  function v9Overdue(subjectName,topicName){
+    return (state.reviews||[]).flatMap(r=>(r.items||[]).map(i=>({r,i}))).filter(x=>{
+      return !x.i.done && x.i.date<todayISO() &&
+        (!subjectName||v9Norm(x.r.subject)===v9Norm(subjectName)) &&
+        (!topicName||v9Norm(x.r.topic)===v9Norm(topicName));
+    });
+  }
+  function v9Priority(s){
+    const days=v9ExamDays(s), topics=s.topics||[], pending=topics.filter(t=>!t.done).length;
+    const q=v9QuestionStats(s.name), errs=v9OpenErrors(s.name).length, late=v9Overdue(s.name).length;
+    let examScore=days===null?5:days<0?0:days<=3?35:days<=7?31:days<=14?25:days<=30?17:9;
+    let weakScore=q.rate===null?6:Math.max(0,Math.round((80-q.rate)*.45));
+    let pendingScore=topics.length?Math.round(pending/topics.length*15):4;
+    let errorScore=Math.min(16,errs*5);
+    let lateScore=Math.min(14,late*4);
+    let weightScore=Math.min(10,Math.max(1,Number(s.weight||1)));
+    let score=Math.min(100,examScore+weakScore+pendingScore+errorScore+lateScore+weightScore);
+    const reasons=[];
+    if(days!==null&&days>=0) reasons.push(days===0?'prova hoje':days===1?'prova amanhã':`prova em ${days} dias`);
+    if(q.rate!==null&&q.rate<75) reasons.push(`${q.rate}% de acerto`);
+    if(errs) reasons.push(`${errs} erro(s) aberto(s)`);
+    if(late) reasons.push(`${late} revisão(ões) atrasada(s)`);
+    if(pending) reasons.push(`${pending} tópico(s) pendente(s)`);
+    return {subject:s,score,days,q,errs,late,pending,reasons};
+  }
+  function v9Rank(){return (state.subjects||[]).map(v9Priority).sort((a,b)=>b.score-a.score);}
+  function v9NextTopic(s){
+    const topics=s?.topics||[];
+    const ranked=topics.map(t=>{
+      const q=v9QuestionStats(s.name,t.name), errs=v9OpenErrors(s.name,t.name).length, late=v9Overdue(s.name,t.name).length;
+      let score=(t.done?0:20)+(q.rate!==null?Math.max(0,75-q.rate):5)+errs*15+late*10+(t.heat==='Muito cobrado'?12:t.heat==='Cobrado'?7:0);
+      return {t,q,errs,late,score};
+    }).sort((a,b)=>b.score-a.score);
+    return ranked[0]||null;
+  }
+  function v9Status(s,t){
+    const q=v9QuestionStats(s.name,t.name), errs=v9OpenErrors(s.name,t.name).length, late=v9Overdue(s.name,t.name).length;
+    if(errs||q.rate!==null&&q.rate<60) return {key:'critical',label:'Recuperar',icon:'!'};
+    if(late||q.rate!==null&&q.rate<75) return {key:'review',label:'Revisar',icon:'↻'};
+    if(t.done) return {key:'mastered',label:'Dominado',icon:'✓'};
+    return {key:'pending',label:'Não iniciado',icon:'•'};
+  }
+  function v9FmtDay(iso){
+    const d=parseISO(iso);
+    return d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+  }
+  function v9Agenda(days=7){
+    const out=[];
+    const dayNames=['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
+    for(let k=0;k<days;k++){
+      const date=addDays(todayISO(),k), dow=dayNames[parseISO(date).getDay()];
+      const items=[];
+      (state.schedule||[]).filter(x=>x.day===dow).forEach(x=>items.push({kind:'Aula',time:x.time||'',title:x.activity||'Atividade',meta:[x.type,x.place].filter(Boolean).join(' · '),source:'schedule'}));
+      (state.tasks||[]).filter(x=>x.date===date&&!x.done).forEach(x=>items.push({kind:x.kind||'Tarefa',time:'',title:x.title,meta:x.subject||'Geral',source:'task'}));
+      (state.reviews||[]).forEach(r=>(r.items||[]).filter(i=>i.date===date&&!i.done).forEach(i=>items.push({kind:'Revisão',time:'',title:r.topic,meta:r.subject+' · '+(i.label||''),source:'review'})));
+      (state.subjects||[]).forEach(s=>{const exam=v9SubjectExam(s);if(exam===date)items.push({kind:'PROVA',time:'',title:s.name,meta:'Avaliação',source:'exam'});});
+      (state.recovery?.plan||[]).filter(x=>x.date===date&&x.status!=='Concluída').forEach(x=>items.push({kind:x.type||'Plano',time:'',title:x.title||x.topic||'Bloco de estudo',meta:x.subject||'',source:'plan'}));
+      items.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+      out.push({date,dow,items});
+    }
+    return out;
+  }
+
+  function v9InjectCSS(){
+    if(document.getElementById('medcidV9Styles'))return;
+    const st=document.createElement('style');st.id='medcidV9Styles';st.textContent=`
+      .v9-next{margin-bottom:16px;padding:20px;border:1px solid rgba(0,243,255,.28);background:linear-gradient(135deg,rgba(0,243,255,.07),rgba(47,255,168,.04)),var(--surface);clip-path:var(--cut,none)}
+      .v9-next-grid{display:grid;grid-template-columns:minmax(0,1.4fr) auto;gap:18px;align-items:center}.v9-next-score{font-family:Orbitron,system-ui;font-size:clamp(2rem,5vw,3.8rem);line-height:1;color:var(--primary)}
+      .v9-next h3{font-size:clamp(1.25rem,2.5vw,1.8rem);margin:5px 0}.v9-reasons{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.v9-reason{border:1px solid var(--line);background:var(--surface-2);padding:5px 8px;font-size:.72rem;font-weight:800}
+      .v9-exams{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.v9-exam{border:1px solid var(--line);padding:7px 9px;background:var(--surface-2);font-size:.72rem}.v9-exam b{color:var(--bad)}
+      .v9-map-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}.v9-map-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+      .v9-subject{position:relative;overflow:hidden}.v9-subject:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--v9-color,var(--primary))}
+      .v9-subject-head{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}.v9-subject-score{font-family:Orbitron,system-ui;font-size:1.25rem;color:var(--primary)}
+      .v9-topic-list{display:grid;gap:7px;margin-top:12px}.v9-topic{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:9px;border:1px solid var(--line);background:var(--surface-2)}
+      .v9-dot{width:20px;height:20px;display:grid;place-items:center;border:1px solid var(--line);font-size:.7rem;font-weight:1000}.v9-topic.mastered .v9-dot{background:rgba(47,255,168,.14);color:var(--good);border-color:rgba(47,255,168,.35)}.v9-topic.review .v9-dot{background:rgba(255,210,62,.12);color:var(--yellow);border-color:rgba(255,210,62,.35)}.v9-topic.critical .v9-dot{background:rgba(255,59,78,.12);color:var(--bad);border-color:rgba(255,59,78,.38)}.v9-topic.pending .v9-dot{color:var(--muted)}
+      .v9-topic small{color:var(--muted);font-size:.68rem}.v9-topic-state{font-size:.62rem;text-transform:uppercase;font-weight:1000;letter-spacing:.05em}
+      .v9-agenda-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.v9-agenda{display:grid;gap:12px}.v9-day{border:1px solid var(--line);background:var(--surface);padding:14px}.v9-day.today{box-shadow:inset 3px 0 0 var(--primary)}.v9-day-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}.v9-day-items{display:grid;gap:7px}.v9-ag-item{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;padding:9px;border:1px solid var(--line);background:var(--surface-2)}.v9-ag-kind{font-size:.63rem;font-weight:1000;text-transform:uppercase;color:var(--primary)}.v9-ag-item.exam{border-color:rgba(255,59,78,.45);background:rgba(255,59,78,.06)}.v9-ag-item.review{border-color:rgba(255,210,62,.35)}.v9-empty{padding:18px;text-align:center;color:var(--muted);border:1px dashed var(--line)}
+      @media(max-width:1100px){.v9-map-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:720px){.v9-next-grid,.v9-map-grid{grid-template-columns:1fr}.v9-ag-item{grid-template-columns:52px 1fr}.v9-ag-item>small{grid-column:2}.v9-next-score{text-align:left}}
+    `;document.head.appendChild(st);
+  }
+  function v9InjectDOM(){
+    v9InjectCSS();
+    const nav=document.querySelector('nav.tabs');
+    if(nav&&!document.querySelector('.tab[data-tab="learningmap"]')){
+      const organize=[...nav.querySelectorAll('.nav-label')].find(x=>x.textContent.trim()==='Organizar');
+      const ref=organize?.nextElementSibling;
+      const map=document.createElement('button');map.className='tab';map.dataset.tab='learningmap';map.setAttribute('role','tab');map.setAttribute('aria-controls','learningmap');map.innerHTML='<span class="ico" aria-hidden="true">⌘</span>Learning Map';
+      const agenda=document.createElement('button');agenda.className='tab';agenda.dataset.tab='agenda';agenda.setAttribute('role','tab');agenda.setAttribute('aria-controls','agenda');agenda.innerHTML='<span class="ico" aria-hidden="true">▣</span>Agenda Inteligente';
+      if(ref){nav.insertBefore(agenda,ref);nav.insertBefore(map,agenda);}else{nav.appendChild(map);nav.appendChild(agenda);}
+    }
+    const main=document.querySelector('.shell main');
+    if(main&&!document.getElementById('learningmap')){
+      const map=document.createElement('section');map.id='learningmap';map.className='panel';map.hidden=true;map.innerHTML=`
+        <div class="v9-map-head"><div><p class="eyebrow" style="color:var(--primary)!important">Mapa vivo da aprendizagem</p><h2>MEDCID Learning Map</h2><p>Disciplinas, módulos, domínio, erros e revisões no mesmo mapa.</p></div><span class="badge purple">v9 · adaptativo</span></div>
+        <div id="v9MapSummary" class="metric-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+        <div id="v9MapGrid" class="v9-map-grid"></div>`;
+      const agenda=document.createElement('section');agenda.id='agenda';agenda.className='panel';agenda.hidden=true;agenda.innerHTML=`
+        <div class="section-head"><div><p class="eyebrow" style="color:var(--primary)!important">Planejamento integrado</p><h2>Agenda Inteligente</h2><p>Aulas, provas, tarefas, revisões e blocos do plano em uma única linha do tempo.</p></div><div class="actions"><button class="btn small soft" data-jump="horario">Editar horário</button><button class="btn small ghost" data-jump="tarefas">Nova tarefa</button></div></div>
+        <div class="v9-agenda-toolbar"><button class="btn small soft" id="v9AgendaToday" type="button">Hoje</button><button class="btn small ghost" id="v9AgendaWeek" type="button">Próximos 7 dias</button><span class="badge gray" id="v9AgendaCount">0 itens</span></div>
+        <div id="v9AgendaList" class="v9-agenda"></div>`;
+      const config=document.getElementById('config');main.insertBefore(map,config);main.insertBefore(agenda,config);
+    }
+    const inicio=document.getElementById('inicio');
+    if(inicio&&!document.getElementById('v9NextAction')){
+      const card=document.createElement('article');card.id='v9NextAction';card.className='v9-next';
+      const actionGrid=inicio.querySelector('.action-grid');inicio.insertBefore(card,actionGrid);
+    }
+  }
+  function v9RenderDashboard(){
+    const card=document.getElementById('v9NextAction');if(!card)return;
+    const rank=v9Rank(),top=rank[0],nt=top?v9NextTopic(top.subject):null;
+    if(!top){card.innerHTML='<div class="v9-empty">Cadastre suas disciplinas para ativar o motor de prioridade.</div>';return;}
+    const exams=rank.filter(x=>x.days!==null&&x.days>=0).sort((a,b)=>a.days-b.days).slice(0,5);
+    card.innerHTML=`
+      <div class="v9-next-grid">
+        <div>
+          <p class="eyebrow" style="color:var(--primary)!important">Próxima ação MEDCID</p>
+          <h3>${escapeHtml(top.subject.name)}${nt?.t?.name?' · '+escapeHtml(nt.t.name):''}</h3>
+          <p style="margin:0">O motor unifica prova, desempenho, erros, revisões e pendências para decidir o próximo passo.</p>
+          <div class="v9-reasons">${top.reasons.slice(0,4).map(r=>'<span class="v9-reason">'+escapeHtml(r)+'</span>').join('')||'<span class="v9-reason">prioridade curricular</span>'}</div>
+          <div class="v9-exams">${exams.map(x=>'<span class="v9-exam">'+escapeHtml(x.subject.name)+' · <b>D-'+x.days+'</b></span>').join('')}</div>
+        </div>
+        <div><div class="v9-next-score">${top.score}</div><small class="muted">score de prioridade / 100</small><div style="margin-top:10px"><button class="btn small" type="button" data-jump="ciclo">▶ Estudar agora</button></div></div>
+      </div>`;
+  }
+  function v9RenderMap(){
+    const grid=document.getElementById('v9MapGrid');if(!grid)return;
+    const rank=v9Rank(),allTopics=(state.subjects||[]).flatMap(s=>s.topics||[]);
+    const mastered=(state.subjects||[]).reduce((a,s)=>a+(s.topics||[]).filter(t=>v9Status(s,t).key==='mastered').length,0);
+    const critical=(state.subjects||[]).reduce((a,s)=>a+(s.topics||[]).filter(t=>v9Status(s,t).key==='critical').length,0);
+    const review=(state.subjects||[]).reduce((a,s)=>a+(s.topics||[]).filter(t=>v9Status(s,t).key==='review').length,0);
+    const sum=document.getElementById('v9MapSummary');if(sum)sum.innerHTML=`
+      <div class="metric-card"><div class="metric-icon">▥</div><strong>${allTopics.length}</strong><span>Tópicos AP2</span></div>
+      <div class="metric-card"><div class="metric-icon">✓</div><strong>${mastered}</strong><span>Dominados</span></div>
+      <div class="metric-card"><div class="metric-icon">↻</div><strong>${review}</strong><span>Para revisar</span></div>
+      <div class="metric-card"><div class="metric-icon">!</div><strong>${critical}</strong><span>Recuperação</span></div>`;
+    grid.innerHTML=rank.map(x=>{
+      const s=x.subject,topics=s.topics||[],done=topics.filter(t=>t.done).length,pct=topics.length?Math.round(done/topics.length*100):0;
+      return `<article class="card v9-subject" style="--v9-color:${escapeHtml(s.color||'#00f3ff')}">
+        <div class="v9-subject-head"><div><small class="muted">${x.days!==null&&x.days>=0?'PROVA D-'+x.days:'SEM PROVA CONFIRMADA'}</small><h3>${escapeHtml(s.name)}</h3><div class="progress"><span style="width:${pct}%"></span></div><small class="muted">${done}/${topics.length} concluídos</small></div><div class="v9-subject-score">${x.score}</div></div>
+        <div class="v9-topic-list">${topics.length?topics.map(t=>{const st=v9Status(s,t),q=v9QuestionStats(s.name,t.name);return `<div class="v9-topic ${st.key}"><span class="v9-dot">${st.icon}</span><div><b>${escapeHtml(t.name)}</b><small>${q.rate!==null?q.rate+'% questões':escapeHtml(t.heat||'sem questões')}</small></div><span class="v9-topic-state">${st.label}</span></div>`;}).join(''):'<div class="v9-empty">Conteúdo AP2 ainda não cadastrado.</div>'}</div>
+      </article>`;
+    }).join('')||'<div class="v9-empty">Nenhuma disciplina cadastrada.</div>';
+  }
+  function v9RenderAgenda(days){
+    const list=document.getElementById('v9AgendaList');if(!list)return;
+    const agenda=v9Agenda(days||Number(list.dataset.days||7));list.dataset.days=String(days||list.dataset.days||7);
+    let count=0;
+    list.innerHTML=agenda.map(d=>{count+=d.items.length;return `<article class="v9-day ${d.date===todayISO()?'today':''}"><div class="v9-day-head"><div><b>${v9FmtDay(d.date)}</b><small class="muted"> · ${d.date===todayISO()?'Hoje':d.date}</small></div><span class="badge gray">${d.items.length} item(ns)</span></div><div class="v9-day-items">${d.items.length?d.items.map(i=>`<div class="v9-ag-item ${i.source==='exam'?'exam':i.source==='review'?'review':''}"><span class="v9-ag-kind">${escapeHtml(i.time||i.kind)}</span><div><b>${escapeHtml(i.title)}</b><small class="muted" style="display:block">${escapeHtml(i.meta||i.kind)}</small></div><small class="muted">${escapeHtml(i.kind)}</small></div>`).join(''):'<div class="v9-empty">Nenhum compromisso acadêmico planejado.</div>'}</div></article>`;}).join('');
+    const badge=document.getElementById('v9AgendaCount');if(badge)badge.textContent=count+' item(ns)';
+  }
+  function v9Bind(){
+    const t=document.getElementById('v9AgendaToday'),w=document.getElementById('v9AgendaWeek');
+    if(t&&!t.dataset.bound){t.dataset.bound='1';t.addEventListener('click',()=>v9RenderAgenda(1));}
+    if(w&&!w.dataset.bound){w.dataset.bound='1';w.addEventListener('click',()=>v9RenderAgenda(7));}
+  }
+
+  const beforeRender=renderAll;
+  renderAll=function(){const r=beforeRender.apply(this,arguments);v9RenderDashboard();v9RenderMap();v9RenderAgenda();return r;};
+
+  const beforeInit=init;
+  init=function(){
+    v9InjectDOM();
+    const r=beforeInit();
+    v9Bind();
+    v9RenderDashboard();v9RenderMap();v9RenderAgenda(7);
+    try{state.medcidV9={version:V9,activatedAt:state.medcidV9?.activatedAt||new Date().toISOString()};save();}catch(e){}
+    return r;
+  };
+})();
