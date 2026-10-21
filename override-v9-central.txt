@@ -148,7 +148,7 @@
           <div class="v9-reasons">${top.reasons.slice(0,4).map(r=>'<span class="v9-reason">'+escapeHtml(r)+'</span>').join('')||'<span class="v9-reason">prioridade curricular</span>'}</div>
           <div class="v9-exams">${exams.map(x=>'<span class="v9-exam">'+escapeHtml(x.subject.name)+' · <b>D-'+x.days+'</b></span>').join('')}</div>
         </div>
-        <div><div class="v9-next-score">${top.score}</div><small class="muted">score de prioridade / 100</small><div style="margin-top:10px"><button class="btn small" type="button" data-jump="ciclo">▶ Estudar agora</button></div></div>
+        <div><div class="v9-next-score">${top.score}</div><small class="muted">score de prioridade / 100</small><div style="margin-top:10px"><button class="btn small" type="button" onclick="showTab('ciclo')">▶ Estudar agora</button></div></div>
       </div>`;
   }
   function v9RenderMap(){
