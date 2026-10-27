@@ -18,14 +18,7 @@
     const total=rows.reduce((a,q)=>a+Number(q.total||0),0), correct=rows.reduce((a,q)=>a+Number(q.correct||0),0);
     return {total,correct,rate:total?Math.round(correct/total*100):null};
   }
-  function v9OpenErrors(subjectName,topicName){
-    return (state.recovery?.errors||[]).filter(e=>{
-      const open=!/corrigido/i.test(String(e.status||''));
-      const sameS=!subjectName||v9Norm(e.subject)===v9Norm(subjectName);
-      const sameT=!topicName||v9Norm(e.topic)===v9Norm(topicName);
-      return open&&sameS&&sameT;
-    });
-  }
+  function v9OpenErrors(){ return []; }
   function v9Overdue(subjectName,topicName){
     return (state.reviews||[]).flatMap(r=>(r.items||[]).map(i=>({r,i}))).filter(x=>{
       return !x.i.done && x.i.date<todayISO() &&
@@ -79,7 +72,6 @@
       const date=addDays(todayISO(),k), dow=dayNames[parseISO(date).getDay()];
       const items=[];
       (state.schedule||[]).filter(x=>x.day===dow).forEach(x=>items.push({kind:'Aula',time:x.time||'',title:x.activity||'Atividade',meta:[x.type,x.place].filter(Boolean).join(' · '),source:'schedule'}));
-      (state.tasks||[]).filter(x=>x.date===date&&!x.done).forEach(x=>items.push({kind:x.kind||'Tarefa',time:'',title:x.title,meta:x.subject||'Geral',source:'task'}));
       (state.reviews||[]).forEach(r=>(r.items||[]).filter(i=>i.date===date&&!i.done).forEach(i=>items.push({kind:'Revisão',time:'',title:r.topic,meta:r.subject+' · '+(i.label||''),source:'review'})));
       (state.subjects||[]).forEach(s=>{const exam=v9SubjectExam(s);if(exam===date)items.push({kind:'PROVA',time:'',title:s.name,meta:'Avaliação',source:'exam'});});
       (state.recovery?.plan||[]).filter(x=>x.date===date&&x.status!=='Concluída').forEach(x=>items.push({kind:x.type||'Plano',time:'',title:x.title||x.topic||'Bloco de estudo',meta:x.subject||'',source:'plan'}));
