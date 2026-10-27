@@ -1,0 +1,398 @@
+/* ===== MEDCID v11 — Simplificação + Planejamento Integrado =====
+   Remove superfícies redundantes da navegação sem apagar dados legados.
+   Unifica Diagnóstico/Prioridades, Evolução/Relatório e Agenda/Calendário.
+   O plano de 7 dias passa a considerar aulas e revisões reais da semana. */
+(function(){
+  const V11='2026-10-27.1';
+  const REMOVED_TABS=['flowing','professor','flashcards','prioridades','erros','relatorio','revisoes','habitos','tarefas','agenda'];
+  const DAY_NAMES=['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
+
+  function v11RemoveFromValidTabs(){
+    REMOVED_TABS.forEach(id=>{const i=VALID_TABS.indexOf(id);if(i>=0)VALID_TABS.splice(i,1);});
+  }
+  v11RemoveFromValidTabs();
+
+  function v11AcademicClass(item){
+    const type=normalize(item?.type||'');
+    const activity=normalize(item?.activity||'');
+    if(['teoria','pratica'].includes(type)){
+      if(/academia|jiu|culto|acro|transito|sono|livre/.test(activity))return false;
+      return true;
+    }
+    return (state.subjects||[]).some(s=>activity.includes(normalize(s.name)));
+  }
+  function v11ClassMinutes(item){
+    const text=String(item?.activity||'')+' '+String(item?.time||'');
+    const m=text.match(/(\d{1,2}):(\d{2})\s*[–—-]\s*(\d{1,2}):(\d{2})/);
+    if(m){
+      const a=Number(m[1])*60+Number(m[2]),b=Number(m[3])*60+Number(m[4]);
+      if(b>a&&b-a<=360)return b-a;
+    }
+    return 60;
+  }
+  function v11SubjectFromActivity(activity){
+    const a=normalize(activity||'');
+    return (state.subjects||[]).find(s=>a.includes(normalize(s.name))||normalize(s.name).includes(a.replace(/pratica|teorica/g,'').trim()))||null;
+  }
+  function v11ClassesOn(date){
+    const dow=DAY_NAMES[parseISO(date).getDay()];
+    return (state.schedule||[]).filter(x=>x.day===dow&&v11AcademicClass(x)).map(x=>({item:x,minutes:v11ClassMinutes(x),subject:v11SubjectFromActivity(x.activity)}));
+  }
+  function v11ReviewsOn(date){
+    const out=[];
+    (state.reviews||[]).forEach(r=>(r.items||[]).forEach(i=>{
+      if(i.date===date&&!i.done)out.push({group:r,item:i});
+    }));
+    return out.sort((a,b)=>{
+      const pa={Alta:0,Média:1,Baixa:2};
+      return (pa[a.group.priority]??1)-(pa[b.group.priority]??1);
+    });
+  }
+  function v11NextTopic(subject,seed=0){
+    const topics=(subject?.topics||[]).filter(t=>!t.done);
+    return topics.length?topics[seed%topics.length].name:(subjectAssessment(subject).note||('Revisão orientada de '+subject.name));
+  }
+  function v11ClassLoadFactor(minutes){
+    if(minutes>=300)return .50;
+    if(minutes>=180)return .65;
+    if(minutes>=120)return .80;
+    return 1;
+  }
+  function v11ReviewMinutes(group){
+    if(group.examSubjectId)return 20;
+    return group.priority==='Alta'?20:15;
+  }
+  function v11PlanReviewTask(day,date,r){
+    return {id:uid(),day,date,type:'Revisão programada',subject:r.group.subject,topic:r.group.topic,method:(r.group.kind||'Revisão')+' · '+(r.item.label||''),minutes:v11ReviewMinutes(r.group),questions:0,status:'Pendente',source:'review',reviewGroupId:r.group.id,reviewItemId:r.item.id};
+  }
+  function v11PlanClassTask(day,date,c){
+    return {id:uid(),day,date,type:'Aula',subject:c.subject?.name||c.item.activity,topic:c.item.activity,method:[c.item.time,c.item.place].filter(Boolean).join(' · '),minutes:c.minutes,questions:0,status:'Fixo',source:'class',scheduleId:c.item.id||null};
+  }
+
+  /* ---- novo plano de 7 dias ---- */
+  generateRecoveryPlan=function(){
+    const ranked=rankedRecoverySubjects();
+    if(!ranked.length){toast('Cadastre ao menos uma disciplina.');showTab('disciplinas');return;}
+    if(state.recovery.plan.length&&!confirm('Substituir o plano atual por um novo ciclo de sete dias integrado às aulas e revisões?'))return;
+
+    const baseDaily=Math.max(60,Number(state.recovery.profile.hours||3)*60);
+    const top=ranked.slice(0,Math.min(4,ranked.length));
+    const start=todayISO();
+    const plan=[];
+
+    for(let day=0;day<7;day++){
+      const date=addDays(start,day);
+      const classes=v11ClassesOn(date);
+      const reviews=v11ReviewsOn(date);
+      const classMinutes=classes.reduce((a,c)=>a+c.minutes,0);
+      const studyBudget=Math.max(45,Math.round(baseDaily*v11ClassLoadFactor(classMinutes)));
+
+      classes.forEach(c=>plan.push(v11PlanClassTask(day,date,c)));
+      reviews.forEach(r=>plan.push(v11PlanReviewTask(day,date,r)));
+
+      const reviewMinutes=reviews.reduce((a,r)=>a+v11ReviewMinutes(r.group),0);
+      let remaining=Math.max(0,studyBudget-reviewMinutes);
+
+      const classSubjects=[...new Map(classes.filter(c=>c.subject).map(c=>[String(c.subject.id),c.subject])).values()];
+      if(classSubjects.length&&remaining>=30){
+        const s=classSubjects[day%classSubjects.length];
+        const mins=Math.min(35,remaining);
+        plan.push({id:uid(),day,date,type:'Consolidação pós-aula',subject:s.name,topic:v11NextTopic(s,day),method:'Recordação ativa + síntese da aula',minutes:mins,questions:0,status:'Pendente',source:'study'});
+        remaining-=mins;
+      }
+
+      if(remaining>=35){
+        const s=top[day%top.length];
+        const topic=v11NextTopic(s,day);
+        const main=Math.min(90,Math.max(35,Math.round(remaining*.68)));
+        plan.push({id:uid(),day,date,type:'Estudo principal',subject:s.name,topic,method:'Teoria direcionada + recordação ativa',minutes:main,questions:0,status:'Pendente',source:'study'});
+        remaining-=main;
+
+        if(remaining>=18){
+          const qmins=Math.min(45,remaining);
+          plan.push({id:uid(),day,date,type:'Questões',subject:s.name,topic:'Aplicar '+topic,method:'Questões comentadas',minutes:qmins,questions:Math.max(5,Math.round(qmins/3)),status:'Pendente',source:'questions'});
+          remaining-=qmins;
+        }
+      }
+    }
+
+    state.recovery.profile.start=start;
+    state.recovery.plan=plan;
+    state.recovery.planMeta={version:V11,generatedAt:new Date().toISOString(),usesClasses:true,usesReviews:true};
+    state.xp=(state.xp||0)+20;
+    save();renderAll();showTab('plano7');
+    toast('Plano de 7 dias criado com aulas e revisões da semana.');
+  };
+
+  function v11SyncPlanReviews(){
+    (state.recovery.plan||[]).filter(t=>t.source==='review').forEach(t=>{
+      const g=(state.reviews||[]).find(r=>r.id===t.reviewGroupId);
+      const i=g?.items?.find(x=>x.id===t.reviewItemId);
+      if(i?.done)t.status='Concluída';
+      else if(t.status==='Concluída')t.status='Pendente';
+    });
+  }
+
+  recoveryPlanMetrics=function(){
+    v11SyncPlanReviews();
+    const tasks=(state.recovery.plan||[]).filter(t=>t.source!=='class'&&t.status!=='Fixo');
+    const done=tasks.filter(t=>t.status==='Concluída'),partial=tasks.filter(t=>t.status==='Parcial');
+    const execution=tasks.length?Math.round((done.length+partial.length*.5)/tasks.length*100):0;
+    const minutes=done.reduce((a,t)=>a+Number(t.minutes||0),0)+partial.reduce((a,t)=>a+Number(t.minutes||0)*.5,0);
+    const questions=done.reduce((a,t)=>a+Number(t.questions||0),0)+Math.round(partial.reduce((a,t)=>a+Number(t.questions||0)*.5,0));
+    return {tasks:tasks.length,done:done.length,execution,minutes:Math.round(minutes),questions,fixed:(state.recovery.plan||[]).filter(t=>t.source==='class').length};
+  };
+
+  renderRecoveryPlan=function(){
+    const area=$('#planWeek');if(!area)return;
+    v11SyncPlanReviews();
+    const m=recoveryPlanMetrics();
+    $('#planTaskCount').textContent=m.tasks;
+    $('#planExecutionRate').textContent=m.execution+'%';
+    $('#planMinutesDone').textContent=(m.minutes/60).toFixed(1)+'h';
+    $('#planQuestionsDone').textContent=m.questions;
+    $('#planEmpty').style.display=(state.recovery.plan||[]).length?'none':'block';
+    area.style.display=(state.recovery.plan||[]).length?'grid':'none';
+    const start=state.recovery.profile.start||todayISO();
+
+    area.innerHTML=Array.from({length:7},(_,day)=>{
+      const date=addDays(start,day),weekday=parseISO(date).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','').toUpperCase();
+      const tasks=(state.recovery.plan||[]).filter(t=>t.day===day);
+      const classes=tasks.filter(t=>t.source==='class'),reviews=tasks.filter(t=>t.source==='review'),active=tasks.filter(t=>t.source!=='class');
+      const classMin=classes.reduce((a,t)=>a+Number(t.minutes||0),0),studyMin=active.reduce((a,t)=>a+Number(t.minutes||0),0);
+      return `<article class="plan-day ${date===todayISO()?'today':''}">
+        <header><div><b>${weekday} · Dia ${day+1}</b><br><span>${fmtDate(date)}</span></div><span>${active.filter(t=>t.status==='Concluída').length}/${active.length}</span></header>
+        <div class="v11-day-load"><span>Aulas ${Math.round(classMin/60*10)/10}h</span><span>${reviews.length} revisão(ões)</span><span>Plano ${Math.round(studyMin/60*10)/10}h</span></div>
+        ${tasks.map(t=>{
+          const fixed=t.source==='class';
+          const cls=fixed?'v11-fixed':t.status==='Concluída'?'completed':t.status==='Parcial'?'partial':'';
+          return `<div class="plan-task ${cls}" ${fixed?'':'onclick="advancePlanTask(\''+t.id+'\')"'}><span class="task-type">${escapeHtml(t.type)}</span><b>${escapeHtml(t.subject)}</b><small><strong>Assunto:</strong> ${escapeHtml(t.topic)}</small><small>${escapeHtml(t.method||'')} · ${t.minutes} min${t.questions?' · '+t.questions+' questões':''}${fixed?' · horário fixo':' · '+t.status}</small></div>`;
+        }).join('')}
+      </article>`;
+    }).join('');
+  };
+
+  advancePlanTask=function(id){
+    const task=state.recovery.plan.find(t=>t.id===id);if(!task||task.source==='class')return;
+    const states=['Pendente','Parcial','Concluída'];
+    task.status=states[(states.indexOf(task.status)+1)%states.length];
+    if(task.source==='review'){
+      const g=(state.reviews||[]).find(r=>r.id===task.reviewGroupId),i=g?.items?.find(x=>x.id===task.reviewItemId);
+      if(i){i.done=task.status==='Concluída';i.completedAt=i.done?todayISO():null;}
+    }
+    if(task.status==='Concluída')state.xp=(state.xp||0)+10;
+    save();renderAll();
+  };
+
+  /* ---- diagnóstico + prioridades ---- */
+  saveDiagnosis=function(){
+    state.recovery.profile={...state.recovery.profile,hours:Number($('#angelsHours').value||3),backlog:Number($('#angelsBacklog').value||0),exams:Number($('#angelsExams').value||0),projects:Number($('#angelsProjects').value||0),reason:$('#angelsReason').value,start:state.recovery.profile.start||todayISO()};
+    state.recovery.selfScores=DIAGNOSIS_QUESTIONS.map((_,i)=>Number($(`#diagnosisScore${i}`).value||3));
+    save();renderAll();toast('Diagnóstico salvo e prioridades recalculadas.');
+    setTimeout(()=>document.getElementById('v11PrioritySection')?.scrollIntoView({behavior:'smooth',block:'start'}),50);
+  };
+
+  /* ---- evolução semanal ---- */
+  function v11WeekBounds(offset=0){
+    const d=parseISO(todayISO());const monday=new Date(d);const weekday=(d.getDay()+6)%7;monday.setDate(d.getDate()-weekday+offset*7);
+    const start=monday.toISOString().slice(0,10),end=addDays(start,6);return {start,end};
+  }
+  function v11InRange(date,b){return date&&date>=b.start&&date<=b.end;}
+  function v11WeekStats(offset=0){
+    const b=v11WeekBounds(offset);
+    const logs=(state.cycle?.log||[]).filter(x=>v11InRange(x.date,b));
+    const minutes=logs.reduce((a,x)=>a+Number(x.minutes||0),0);
+    const qs=(state.questions||[]).filter(x=>v11InRange(x.date,b));
+    const qTotal=qs.reduce((a,x)=>a+Number(x.total||0),0),qCorrect=qs.reduce((a,x)=>a+Number(x.correct||0),0);
+    let reviews=0;(state.reviews||[]).forEach(r=>(r.items||[]).forEach(i=>{if(i.done&&v11InRange(i.completedAt,b))reviews++;}));
+    const checks=(state.recovery.checkins||[]).filter(x=>v11InRange(x.date,b));
+    const execution=checks.length?Math.round(checks.reduce((a,x)=>a+Number(x.execution||0),0)/checks.length):null;
+    return {minutes,qTotal,qCorrect,accuracy:qTotal?Math.round(qCorrect/qTotal*100):null,reviews,execution,b};
+  }
+  function v11Delta(curr,prev,unit='',points=false){
+    if(curr===null||curr===undefined)return 'sem dados';
+    if(prev===null||prev===undefined||prev===0)return 'base desta semana';
+    const d=curr-prev,sign=d>0?'+':'';
+    return points?`${sign}${d} pp`:`${sign}${d}${unit}`;
+  }
+  function v11RenderEvolution(){
+    const box=$('#v11EvolutionGrid');if(!box)return;
+    const c=v11WeekStats(0),p=v11WeekStats(-1);
+    const hours=(c.minutes/60).toFixed(1),prevHours=(p.minutes/60).toFixed(1);
+    box.innerHTML=[
+      [hours+'h','tempo de foco',v11Delta(Number(hours),Number(prevHours),'h')],
+      [c.qTotal,'questões',v11Delta(c.qTotal,p.qTotal)],
+      [c.accuracy===null?'—':c.accuracy+'%','acerto em questões',v11Delta(c.accuracy,p.accuracy,'',true)],
+      [c.reviews,'revisões concluídas',v11Delta(c.reviews,p.reviews)]
+    ].map(([v,l,d])=>`<div class="v11-evo-card"><strong>${v}</strong><span>${l}</span><small>${d} vs. semana anterior</small></div>`).join('');
+    const text=$('#v11EvolutionText');if(text){
+      const parts=[`Você acumulou ${hours}h de foco`,`${c.qTotal} questões`,`${c.reviews} revisões concluídas`];
+      if(c.accuracy!==null)parts.push(`${c.accuracy}% de acerto`);
+      text.textContent=parts.join(' · ')+'.';
+    }
+  }
+  function v11ReviewsCompletedThisWeek(){return v11WeekStats(0).reviews;}
+
+  renderRecoveryProgress=function(){
+    const m=recoveryPlanMetrics();if(!$('#progressExecution'))return;
+    $('#progressExecution').textContent=m.execution+'%';
+    $('#progressHours').textContent=(m.minutes/60).toFixed(1)+'h';
+    $('#progressQuestions').textContent=m.questions;
+    $('#progressRecurringErrors').textContent=v11ReviewsCompletedThisWeek();
+    const chart=$('#executionChart');
+    chart.innerHTML=Array.from({length:7},(_,day)=>{const tasks=state.recovery.plan.filter(t=>t.day===day&&t.source!=='class'),done=tasks.filter(t=>t.status==='Concluída').length,partial=tasks.filter(t=>t.status==='Parcial').length,pct=tasks.length?Math.round((done+partial*.5)/tasks.length*100):0;return `<div><b>${pct}%</b><i style="height:${Math.max(4,pct)}%"></i><small>D${day+1}</small></div>`;}).join('');
+    const history=$('#checkinHistory');history.innerHTML=state.recovery.checkins.length?state.recovery.checkins.slice(0,7).map(c=>`<div class="checkin-row"><b>${fmtDate(c.date)}</b><div><span class="badge blue">Execução ${c.execution}%</span> <span class="badge gray">Energia ${c.energy}/5</span> <span class="badge gray">Foco ${c.focus}/5</span><br><small class="muted">${escapeHtml(c.challenge||'Sem desafio registrado')}${c.win?' · Vitória: '+escapeHtml(c.win):''}</small></div><span>${c.win?'✓':'•'}</span></div>`).join(''):'<div class="empty">Faça o primeiro check-in para acompanhar a semana.</div>';
+    v11RenderEvolution();
+  };
+
+  reportRecommendations=function(){
+    const m=recoveryPlanMetrics(),list=[];
+    const top=rankedRecoverySubjects()[0];
+    if(top)list.push(`Proteja primeiro os blocos de ${top.name}.`);
+    if(overdueReviews().length)list.push('Quite as revisões atrasadas antes de adicionar teoria nova.');
+    if(m.execution<60)list.push('Reduza o volume discricionário nos dias com maior carga de aulas.');
+    else list.push('Mantenha o volume atual e preserve margem para imprevistos.');
+    const ws=v11WeekStats(0);
+    if(ws.qTotal<Number(state.config.dailyQuestionsGoal||30)*3)list.push('Aumente gradualmente a exposição a questões nos próximos blocos.');
+    list.push('Faça o check-in diário para comparar execução, energia e foco ao longo da semana.');
+    return list;
+  };
+  recoveryReportText=function(){
+    const m=recoveryPlanMetrics(),top=rankedRecoverySubjects()[0],w=v11WeekStats(0);
+    return `MEDCID · EVOLUÇÃO SEMANAL\nExecução do plano: ${m.execution}%\nPrioridade principal: ${top?.name||'não definida'}\nTempo de foco nesta semana: ${(w.minutes/60).toFixed(1)}h\nQuestões nesta semana: ${w.qTotal}\nAcerto: ${w.accuracy===null?'sem dados':w.accuracy+'%'}\nRevisões concluídas: ${w.reviews}\nClareza do diagnóstico: ${diagnosisPercent()}%\n\nRecomendações:\n- ${reportRecommendations().join('\n- ')}`;
+  };
+  renderRecoveryReport=function(){
+    if(!$('#reportStats'))return;
+    const m=recoveryPlanMetrics(),top=rankedRecoverySubjects()[0],w=v11WeekStats(0);
+    $('#reportExecutionBig').textContent=m.execution;
+    $('#reportCycleSummary').textContent=`Semana ${fmtDate(w.b.start)}–${fmtDate(w.b.end)} · ${state.config.cycleName} · aulas e revisões integradas ao plano`;
+    $('#reportStats').innerHTML=[
+      [state.subjects.length,'disciplinas mapeadas'],
+      [m.done,'blocos concluídos'],
+      [w.qTotal,'questões na semana'],
+      [w.reviews,'revisões concluídas']
+    ].map(([v,l])=>`<div class="report-stat"><strong>${v}</strong><span>${l}</span></div>`).join('');
+    $('#reportObservedText').innerHTML=`Disponibilidade declarada de <b>${state.recovery.profile.hours}h/dia</b>, com ${state.recovery.profile.backlog} conteúdo(s) atrasado(s). O plano atual considera a carga de aulas e as revisões programadas de cada dia.`;
+    $('#reportPriorityTitle').textContent=top?`${top.name} é a prioridade atual`:'A prioridade principal ainda não foi definida';
+    $('#reportInferenceText').textContent=top?`${top.name} alcançou ${top.recoveryScore}/100 (${recoveryPriorityLabel(top.recoveryScore).toLowerCase()}). A execução do plano está em ${m.execution}% e o desempenho semanal é comparado com a semana anterior acima.`:'Cadastre disciplinas e critérios para gerar a interpretação.';
+    $('#reportRecommendations').innerHTML=reportRecommendations().map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  };
+
+  /* ---- DOM / navegação ---- */
+  function v11Css(){
+    if($('#medcidV11Styles'))return;
+    const st=document.createElement('style');st.id='medcidV11Styles';st.textContent=`
+      .v11-legacy-panel{display:none!important}
+      .v11-section{margin-top:18px}.v11-divider{height:1px;background:var(--line);margin:22px 0}
+      .v11-evolution{margin-bottom:16px}.v11-evolution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .v11-evo-card{border:1px solid var(--line);background:var(--surface);padding:14px}.v11-evo-card strong{display:block;font-size:1.7rem}.v11-evo-card span{display:block;font-size:.72rem;font-weight:900;text-transform:uppercase;color:var(--muted)}.v11-evo-card small{display:block;margin-top:7px;color:var(--primary);font-weight:800}
+      .v11-day-load{display:flex;gap:5px;flex-wrap:wrap;margin:-2px 0 9px}.v11-day-load span{font-size:.62rem;padding:4px 6px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);font-weight:800}
+      .plan-task.v11-fixed{cursor:default;background:rgba(6,182,212,.07);border-style:dashed;opacity:.88}.plan-task.v11-fixed .task-type{color:var(--accent)}
+      .v11-calendar-section,.v11-smart-section,.v11-priority-section,.v11-report-section{margin-top:18px}
+      .v11-subhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+      #horario .calendar-shell{margin-top:0}
+      @media(max-width:900px){.v11-evolution-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.v11-evolution-grid{grid-template-columns:1fr}}
+    `;document.head.appendChild(st);
+  }
+  function v11RemoveNav(id){
+    document.querySelector(`.tab[data-tab="${id}"]`)?.remove();
+    const p=$('#'+id);if(p){p.classList.add('v11-legacy-panel');p.hidden=true;}
+  }
+  function v11RenameTab(id,label){
+    const tab=document.querySelector(`.tab[data-tab="${id}"]`);if(!tab)return;
+    const text=[...tab.childNodes].find(x=>x.nodeType===Node.TEXT_NODE);if(text)text.textContent=' '+label;
+  }
+  function v11MoveDiagnosisPriorities(){
+    const diag=$('#diagnostico'),pri=$('#prioridades');if(!diag||!pri||$('#v11PrioritySection'))return;
+    const head=diag.querySelector('.section-head h2');if(head)head.textContent='Diagnóstico & Prioridades';
+    const sub=diag.querySelector('.section-head p:last-child');if(sub)sub.textContent='Entenda sua situação atual e transforme os dados diretamente em prioridades de estudo.';
+    const saveBtn=$('#saveDiagnosis');if(saveBtn)saveBtn.textContent='Salvar diagnóstico e recalcular prioridades';
+    const section=document.createElement('section');section.id='v11PrioritySection';section.className='v11-priority-section';
+    section.innerHTML='<div class="v11-divider"></div><div class="v11-subhead"><div><p class="eyebrow" style="color:var(--primary)!important">Etapa seguinte</p><h2>Prioridades do ciclo</h2><p>Datas de prova, domínio, atraso e peso da disciplina alimentam o plano de 7 dias.</p></div></div>';
+    diag.appendChild(section);
+    const gen=$('#generatePlanFromPriorities');if(gen)section.querySelector('.v11-subhead').appendChild(gen);
+    const summary=pri.querySelector('.priority-summary'),weights=$('#priorityWeightGrid')?.closest('.card'),cards=$('#priorityCards');
+    [summary,weights,cards].filter(Boolean).forEach(x=>section.appendChild(x));
+  }
+  function v11MoveScheduleCalendar(){
+    const sched=$('#horario'),rev=$('#revisoes'),smart=$('#agenda');if(!sched)return;
+    const h=sched.querySelector('.section-head h2');if(h)h.textContent='Agenda & Calendário';
+    const p=sched.querySelector('.section-head p');if(p)p.textContent='Veja aulas, compromissos acadêmicos, revisões e provas em uma única aba.';
+
+    if(smart&&!$('#v11SmartSection')){
+      const sec=document.createElement('section');sec.id='v11SmartSection';sec.className='card v11-smart-section';
+      sec.innerHTML='<div class="v11-subhead"><div><h2>Próximos 7 dias</h2><p>Linha do tempo formada pelo seu horário, plano, provas e revisões.</p></div></div>';
+      const toolbar=smart.querySelector('.v9-agenda-toolbar'),list=$('#v9AgendaList');
+      if(toolbar)sec.appendChild(toolbar);if(list)sec.appendChild(list);
+      sched.insertBefore(sec,sched.querySelector('#scheduleNow')||sched.children[1]||null);
+    }
+    if(rev&&!$('#v11CalendarSection')){
+      const sec=document.createElement('section');sec.id='v11CalendarSection';sec.className='v11-calendar-section';
+      sec.innerHTML='<div class="v11-divider"></div><div class="v11-subhead"><div><h2>Calendário de revisões & provas</h2><p>Revisões espaçadas e marcos de prova conectados à mesma agenda.</p></div></div>';
+      const add=$('#addReview');if(add)sec.querySelector('.v11-subhead').appendChild(add);
+      const shell=rev.querySelector('.calendar-shell'),form=$('#reviewForm'),filters=form?.nextElementSibling,table=$('#reviewTable')?.closest('.table-wrap');
+      [shell,form,filters,table].filter(Boolean).forEach(x=>sec.appendChild(x));
+      sched.appendChild(sec);
+    }
+  }
+  function v11MoveProgressReport(){
+    const prog=$('#progresso'),rep=$('#relatorio');if(!prog||!rep)return;
+    const h=prog.querySelector('.section-head h2');if(h)h.textContent='Evolução semanal & Relatório';
+    const p=prog.querySelector('.section-head p:last-child');if(p)p.textContent='Compare esta semana com a anterior e transforme os dados em próximos passos.';
+    const lastMetric=$('#progressRecurringErrors')?.closest('.stat');if(lastMetric){const lab=lastMetric.querySelector('span');if(lab)lab.textContent='revisões concluídas';}
+
+    if(!$('#v11Evolution')){
+      const evo=document.createElement('article');evo.id='v11Evolution';evo.className='card v11-evolution';
+      evo.innerHTML='<div class="section-head"><div><h2>Evolução desta semana</h2><p id="v11EvolutionText">Comparando com a semana anterior...</p></div><span class="badge blue">semana atual × anterior</span></div><div id="v11EvolutionGrid" class="v11-evolution-grid"></div>';
+      const toolbar=prog.querySelector('.plan-toolbar');prog.insertBefore(evo,toolbar||prog.children[1]||null);
+    }
+    if(rep&&!$('#v11ReportSection')){
+      const sec=document.createElement('section');sec.id='v11ReportSection';sec.className='v11-report-section';
+      sec.innerHTML='<div class="v11-divider"></div><div class="v11-subhead"><div><h2>Relatório integrado</h2><p>Resumo do ciclo, interpretação e recomendações.</p></div></div>';
+      const actions=rep.querySelector('.section-head .actions');if(actions)sec.querySelector('.v11-subhead').appendChild(actions);
+      [...rep.children].filter(x=>!x.classList.contains('section-head')).forEach(x=>sec.appendChild(x));
+      prog.appendChild(sec);
+    }
+  }
+  function v11CleanDashboard(){
+    const promptCard=document.querySelector('#inicio .action-card.teacher');if(promptCard)promptCard.remove();
+    const reviewCard=document.querySelector('#inicio .action-card.review');if(reviewCard){reviewCard.dataset.jump='horario';const span=reviewCard.querySelector('span:not(.action-icon)');if(span)span.innerHTML='<b id="actionDueCount">0</b> revisões pendentes na agenda';}
+    const actionGrid=$('#inicio .action-grid');if(actionGrid)actionGrid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';
+    const metric=$('#studiedCardsCount')?.closest('.metric-card');if(metric){const lab=metric.querySelector('span');if(lab)lab.textContent='Revisões concluídas';}
+    const aiCard=$('#config .ai-connector-card');if(aiCard)aiCard.style.display='none';
+    const help=$('#config .card:not(.ai-connector-card) p'); // mantém ajuda genérica
+  }
+  function v11UpdateDashboardNumbers(){
+    if($('#studiedCardsCount'))$('#studiedCardsCount').textContent=(state.reviews||[]).reduce((a,r)=>a+(r.items||[]).filter(i=>i.done).length,0);
+    const qTotal=(state.questions||[]).reduce((a,q)=>a+Number(q.total||0),0),qCorrect=(state.questions||[]).reduce((a,q)=>a+Number(q.correct||0),0);
+    if($('#accuracyMetric'))$('#accuracyMetric').textContent=(qTotal?Math.round(qCorrect/qTotal*100):0)+'%';
+    if($('#actionDueCount'))$('#actionDueCount').textContent=todaysReviews().length+overdueReviews().length;
+  }
+  function v11SimplifyUI(){
+    v11Css();
+    v11MoveDiagnosisPriorities();
+    v11MoveScheduleCalendar();
+    v11MoveProgressReport();
+    v11CleanDashboard();
+    REMOVED_TABS.forEach(v11RemoveNav);
+    v11RenameTab('diagnostico','Diagnóstico & Prioridades');
+    v11RenameTab('progresso','Evolução');
+    v11RenameTab('horario','Agenda');
+    const labels=[...document.querySelectorAll('.nav-label')];
+    labels.forEach(l=>{if(l.textContent.trim()==='Projeto Angels')l.textContent='Planejar';});
+    if(REMOVED_TABS.includes(location.hash.replace(/^#\/?/,'')))showTab('inicio',false);
+    v11UpdateDashboardNumbers();v11RenderEvolution();
+  }
+
+  const v11PrevRender=renderAll;
+  renderAll=function(){const r=v11PrevRender.apply(this,arguments);v11UpdateDashboardNumbers();v11RenderEvolution();return r;};
+
+  const v11PrevInit=init;
+  init=function(){
+    const r=v11PrevInit.apply(this,arguments);
+    v11SimplifyUI();
+    renderAll();
+    try{state.medcidV11={version:V11,activatedAt:state.medcidV11?.activatedAt||new Date().toISOString()};save();}catch(e){}
+    return r;
+  };
+})();
