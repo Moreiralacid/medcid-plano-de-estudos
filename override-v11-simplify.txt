@@ -278,6 +278,14 @@
     $('#reportRecommendations').innerHTML=reportRecommendations().map(x=>`<li>${escapeHtml(x)}</li>`).join('');
   };
 
+  renderAngelsDashboard=function(){
+    const ranked=rankedRecoverySubjects(),m=recoveryPlanMetrics(),due=todaysReviews().length+overdueReviews().length;
+    if($('#angelsDiagnosisMetric'))$('#angelsDiagnosisMetric').textContent=diagnosisPercent()+'%';
+    if($('#angelsPriorityMetric'))$('#angelsPriorityMetric').textContent=ranked[0]?.name||'—';
+    if($('#angelsExecutionMetric'))$('#angelsExecutionMetric').textContent=m.execution+'%';
+    if($('#angelsErrorsMetric'))$('#angelsErrorsMetric').textContent=due;
+  };
+
   /* ---- DOM / navegação ---- */
   function v11Css(){
     if($('#medcidV11Styles'))return;
@@ -360,7 +368,9 @@
     const actionGrid=$('#inicio .action-grid');if(actionGrid)actionGrid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';
     const metric=$('#studiedCardsCount')?.closest('.metric-card');if(metric){const lab=metric.querySelector('span');if(lab)lab.textContent='Revisões concluídas';}
     const aiCard=$('#config .ai-connector-card');if(aiCard)aiCard.style.display='none';
-    const help=$('#config .card:not(.ai-connector-card) p'); // mantém ajuda genérica
+    const angelsErrorMetric=$('#angelsErrorsMetric')?.closest('.angels-kpi');if(angelsErrorMetric){const lab=angelsErrorMetric.querySelector('span');if(lab)lab.textContent='revisões pendentes';}
+    const qTitle=$('#questoes .section-head h2');if(qTitle)qTitle.textContent='Banco de questões';
+    const qDesc=$('#questoes .section-head p');if(qDesc)qDesc.textContent='Registre desempenho por assunto. O MEDCID identifica pontos fracos pelo percentual de acertos.';
   }
   function v11UpdateDashboardNumbers(){
     if($('#studiedCardsCount'))$('#studiedCardsCount').textContent=(state.reviews||[]).reduce((a,r)=>a+(r.items||[]).filter(i=>i.done).length,0);
