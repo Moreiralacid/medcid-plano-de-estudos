@@ -69,6 +69,37 @@
     return {id:uid(),day,date,type:'Aula',subject:c.subject?.name||c.item.activity,topic:c.item.activity,method:[c.item.time,c.item.place].filter(Boolean).join(' · '),minutes:c.minutes,questions:0,status:'Fixo',source:'class',scheduleId:c.item.id||null};
   }
 
+  /* ---- métricas globais sem recursos removidos ---- */
+  calcOverallProgress=function(){
+    const topics=state.subjects.flatMap(s=>s.topics||[]),topicDone=topics.filter(t=>t.done).length;
+    const reviews=state.reviews.flatMap(r=>r.items||[]),reviewDone=reviews.filter(r=>r.done).length;
+    const plan=(state.recovery.plan||[]).filter(t=>t.source!=='class'&&t.status!=='Fixo');
+    const planDone=plan.filter(t=>t.status==='Concluída').length+plan.filter(t=>t.status==='Parcial').length*.5;
+    const denom=topics.length+reviews.length+plan.length,num=topicDone+reviewDone+planDone;
+    return denom?Math.round(num/denom*100):0;
+  };
+  activityDates=function(){
+    const dates=new Set();
+    (state.reviews||[]).forEach(r=>(r.items||[]).filter(i=>i.done).forEach(i=>dates.add(i.completedAt||i.date)));
+    (state.recovery.plan||[]).filter(t=>t.source!=='class'&&t.status==='Concluída').forEach(t=>dates.add(t.date||addDays(state.recovery.profile.start||todayISO(),t.day||0)));
+    (state.recovery.checkins||[]).forEach(x=>dates.add(x.date));
+    (state.cycle?.log||[]).forEach(x=>{if(x.date)dates.add(x.date);});
+    (state.questions||[]).forEach(x=>{if(x.date)dates.add(x.date);});
+    return dates;
+  };
+  renderReviewCalendar=function(){
+    const area=$('#reviewCalendarGrid');if(!area)return;
+    const year=calendarCursor.getFullYear(),month=calendarCursor.getMonth();
+    $('#calendarMonthLabel').textContent=new Date(year,month,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,m=>m.toUpperCase());
+    const heads=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map(x=>`<div class="month-head">${x}</div>`).join('');
+    const first=new Date(year,month,1),startOffset=(first.getDay()+6)%7,start=new Date(year,month,1-startOffset);
+    const reviews=state.reviews.flatMap(r=>(r.items||[]).filter(i=>!i.done).map(i=>({date:i.date,type:r.examSubjectId?'exam-review':'review',title:`${r.examSubjectId?'Pré-prova':'Revisão'}: ${r.subject} · ${i.label}`})));
+    const exams=state.subjects.flatMap(subject=>{const exam=subjectAssessment(subject).exam;return exam?[{date:exam,type:'exam',title:`Prova: ${subject.name}`,subject:subject.name}]:[];});
+    const all=[...exams,...reviews];
+    const days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const iso=d.toISOString().slice(0,10);const events=all.filter(e=>e.date===iso).sort((a,b)=>a.type==='exam'?-1:b.type==='exam'?1:0).slice(0,7);const exam=events.find(e=>e.type==='exam');return `<div class="month-day ${d.getMonth()!==month?'muted':''} ${iso===todayISO()?'today':''}" aria-label="${fmtDate(iso)}">${d.getDate()}${exam?`<span class="exam-chip" title="${escapeHtml(exam.title)}">PROVA · ${escapeHtml(exam.subject)}</span>`:''}<div class="day-dots">${events.map(e=>`<i class="${e.type}" title="${escapeHtml(e.title)}"></i>`).join('')}</div></div>`;}).join('');
+    area.innerHTML=heads+days;
+  };
+
   /* ---- novo plano de 7 dias ---- */
   generateRecoveryPlan=function(){
     const ranked=rankedRecoverySubjects();
