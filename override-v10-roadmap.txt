@@ -12,9 +12,7 @@
     const total=rows.reduce((a,q)=>a+Number(q.total||0),0),correct=rows.reduce((a,q)=>a+Number(q.correct||0),0);
     return {total,correct,rate:total?Math.round(correct/total*100):null};
   }
-  function errors(subject,topic){
-    return (state.recovery?.errors||[]).filter(e=>!/corrigido/i.test(String(e.status||''))&&(!subject||n(e.subject)===n(subject))&&(!topic||n(e.topic)===n(topic))).length;
-  }
+  function errors(){ return 0; }
   function overdue(subject,topic){
     return (state.reviews||[]).flatMap(r=>(r.items||[]).map(i=>({r,i}))).filter(x=>!x.i.done&&x.i.date<todayISO()&&(!subject||n(x.r.subject)===n(subject))&&(!topic||n(x.r.topic)===n(topic))).length;
   }
