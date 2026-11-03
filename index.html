@@ -76,6 +76,11 @@
 <\/script>`;
   s=s.includes('</body>')?s.replace('</body>',musicFallback+'</body>'):s+musicFallback;
   const tema='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap"><link rel="stylesheet" href="./tema-batcomputador.css?ref='+ref+'"><link rel="stylesheet" href="./musica-medcid.css?ref='+ref+'"><script src="./tema-batcomputador.js?ref='+ref+'"><\/script><script src="./musica-medcid.js?ref='+ref+'"><\/script>';
+  // Separação da família MEDCID: este site continua sendo o PLANNER.
+  // Os módulos de disciplinas pertencem ao outro produto, MEDCID STUDY.
+  // Alteramos apenas textos do HTML já montado, sem modificar dados ou patches.
+  s=s.replace('<small>Study intelligence</small>','<small>MEDCID Planner · Organização</small>');
+  s=s.replace('MEDCID Learning OS','MEDCID Planner');
   s=s.includes('</head>')?s.replace('</head>',tema+'</head>'):tema+s;
   document.open();document.write(s);document.close();
 })().catch(err=>{
