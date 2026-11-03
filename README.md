@@ -2,6 +2,9 @@
 
 Plataforma estática de estudos médicos com planejamento semanal, revisões espaçadas, flashcards próprios, Projeto Angels, Pomodoro e biblioteca pessoal de prompts para uso em IAs externas.
 
+> **MEDCID Planner = organização.** O produto **MEDCID STUDY** é um ecossistema independente para módulos por disciplina, questões, flashcards e simulados; seu código está no repositório privado `Moreiralacid/medcid-app`. O Planner permanece funcionando como antes. Não há sincronização automática de contas ou dados entre os produtos.
+
+
 ## Abrir localmente
 
 Basta abrir `index.html` no navegador. Os dados são salvos no próprio dispositivo por `localStorage`.
@@ -63,6 +66,11 @@ O primeiro acesso contém matérias, assuntos, revisões e tarefas de demonstra�
 ## Flashcards e revisão espaçada
 
 O aluno pode cadastrar manualmente pergunta, resposta e contexto, além de importar flashcards preparados por uma IA externa. A própria aba agenda revisões espaçadas conforme o desempenho registrado.
+
+## Divisão dos ecossistemas
+
+- **Planner:** esta aplicação e este repositório. Planejar compromissos, tarefas, revisões e rotina. Recursos didáticos antigos permanecem por compatibilidade; nenhum dado foi migrado.
+- **STUDY:** biblioteca de matérias e conteúdos por período. Futuro 1º período gratuito, conteúdos dos períodos seguintes possivelmente pagos; sem vendas, contas ou testes com alunos neste momento.
 
 ## Privacidade
 
