@@ -1,0 +1,316 @@
+/* ===== MEDCID v12 — Painel de desempenho na aba Evolução =====
+   Tela própria do MEDCID. Lê somente dados que o Planner já registra:
+   plano de 7 dias, revisões espaçadas e sessões do Banco de questões.
+   Não altera, migra nem apaga dados. Para desativar, remova este arquivo do index.html. */
+(function(){
+  const V12='2026-11-16.1';
+  const V12_WEAK=70;          // mesmo corte de "ponto fraco" usado no Banco de questões
+  const V12_SMALL_SAMPLE=20;  // abaixo disso, o percentual ainda oscila muito
+  let v12Period='7';
+  const v12OpenSubjects=new Set();
+
+  /* ---------- datas ---------- */
+  const v12InRange=(d,w)=>!!d&&d>=w.start&&d<=w.end;
+  function v12PlanDate(t){return t.date||addDays(state.recovery?.profile?.start||todayISO(),Number(t.day||0));}
+  function v12Earliest(){
+    const t=todayISO();let min=null;
+    const see=d=>{if(d&&d<=t&&(!min||d<min))min=d;};
+    (state.questions||[]).forEach(q=>see(q.date));
+    (state.recovery?.plan||[]).forEach(p=>see(v12PlanDate(p)));
+    (state.reviews||[]).forEach(r=>(r.items||[]).forEach(i=>see(i.date)));
+    return min;
+  }
+  function v12Window(period){
+    const end=todayISO();
+    if(period==='all'){
+      const start=v12Earliest()||end;
+      return {start,end,len:Math.max(1,diffDays(end,start)+1),prev:null};
+    }
+    const len=Number(period),start=addDays(end,-(len-1)),prevEnd=addDays(start,-1);
+    return {start,end,len,prev:{start:addDays(prevEnd,-(len-1)),end:prevEnd,len}};
+  }
+  function v12WeekBounds(offset){
+    const d=parseISO(todayISO()),monday=new Date(d);
+    monday.setDate(d.getDate()-((d.getDay()+6)%7)+offset*7);
+    const start=monday.toISOString().slice(0,10);
+    return {start,end:addDays(start,6)};
+  }
+
+  /* ---------- métricas ---------- */
+  function v12Plan(w){
+    const tasks=(state.recovery?.plan||[]).filter(t=>t.source!=='class'&&v12InRange(v12PlanDate(t),w));
+    const done=tasks.filter(t=>t.status==='Concluída').length,partial=tasks.filter(t=>t.status==='Parcial').length;
+    return {total:tasks.length,done,partial,pct:tasks.length?Math.round((done+partial*.5)/tasks.length*100):null};
+  }
+  function v12Reviews(w){
+    const t=todayISO();let due=0,onTime=0,late=0,pending=0;
+    (state.reviews||[]).forEach(r=>(r.items||[]).forEach(i=>{
+      if(!v12InRange(i.date,w))return;
+      if(i.date===t&&!i.done)return; // ainda dá tempo hoje: não conta como atraso
+      due++;
+      if(i.done){if(!i.completedAt||i.completedAt<=i.date)onTime++;else late++;}
+      else pending++;
+    }));
+    return {due,onTime,late,pending,pct:due?Math.round(onTime/due*100):null};
+  }
+  function v12Questions(w){
+    const qs=(state.questions||[]).filter(q=>v12InRange(q.date,w));
+    const total=qs.reduce((a,q)=>a+Number(q.total||0),0),correct=qs.reduce((a,q)=>a+Number(q.correct||0),0);
+    return {qs,total,correct,acc:total?Math.round(correct/total*100):null,sessions:qs.length,days:new Set(qs.map(q=>q.date)).size};
+  }
+  function v12Goal(){return Math.max(1,Number(state.config?.dailyQuestionsGoal||30));}
+  function v12PerDay(){
+    const map={};(state.questions||[]).forEach(q=>{if(q.date)map[q.date]=(map[q.date]||0)+Number(q.total||0);});return map;
+  }
+  function v12Streaks(){
+    const per=v12PerDay(),goal=v12Goal(),t=todayISO();
+    let cur=0,d=per[t]>=goal?t:addDays(t,-1);
+    while((per[d]||0)>=goal){cur++;d=addDays(d,-1);}
+    const days=Object.keys(per).sort();let best=0,run=0,prev=null;
+    days.forEach(day=>{
+      if((per[day]||0)>=goal){run=(prev&&addDays(prev,1)===day)?run+1:1;prev=day;best=Math.max(best,run);}
+      else{run=0;prev=null;}
+    });
+    return {cur,best:Math.max(best,cur)};
+  }
+  function v12BySubject(w){
+    const map={};
+    v12Questions(w).qs.forEach(q=>{
+      const sk=normalize(q.subject).trim()||'(sem disciplina)';
+      if(!map[sk])map[sk]={key:sk,name:q.subject||'(sem disciplina)',total:0,correct:0,topics:{}};
+      const s=map[sk];s.total+=Number(q.total||0);s.correct+=Number(q.correct||0);
+      const tk=normalize(q.topic).trim()||'(sem assunto)';
+      if(!s.topics[tk])s.topics[tk]={name:q.topic||'(sem assunto)',total:0,correct:0};
+      s.topics[tk].total+=Number(q.total||0);s.topics[tk].correct+=Number(q.correct||0);
+    });
+    const rate=x=>x.total?Math.round(x.correct/x.total*100):0;
+    return Object.values(map).map(s=>({...s,rate:rate(s),topics:Object.values(s.topics).map(t=>({...t,rate:rate(t)})).sort((a,b)=>a.rate-b.rate)}))
+      .sort((a,b)=>a.rate-b.rate||b.total-a.total);
+  }
+
+  /* ---------- apresentação ---------- */
+  function v12Tone(r){return r===null||r===undefined?'none':r<50?'bad':r<V12_WEAK?'warn':'good';}
+  function v12Delta(curr,prev){
+    if(curr===null||prev===null||prev===undefined)return '';
+    const d=curr-prev;if(d===0)return '<small class="v12-delta">= período anterior</small>';
+    return `<small class="v12-delta ${d>0?'up':'down'}">${d>0?'▲ +':'▼ '}${d} pp vs. período anterior</small>`;
+  }
+  function v12Kpi(label,value,tone,sub,extra=''){
+    return `<div class="v12-kpi tone-${tone}"><span class="v12-kpi-label">${label}</span><strong>${value}</strong><small>${sub}</small>${extra}</div>`;
+  }
+  function v12PeriodLabel(w){return v12Period==='all'?`desde ${fmtDate(w.start)}`:`últimos ${w.len} dias`;}
+
+  function v12RenderKpis(w){
+    const plan=v12Plan(w),rev=v12Reviews(w),q=v12Questions(w),goal=v12Goal();
+    const prevQ=w.prev?v12Questions(w.prev):null;
+    const goalPct=Math.round(q.total/(goal*w.len)*100),avg=(q.total/w.len).toFixed(q.total/w.len<10?1:0);
+    const backlog=overdueReviews().length;
+    return [
+      v12Kpi('Execução do plano',plan.pct===null?'—':plan.pct+'%',v12Tone(plan.pct),
+        plan.total?`${plan.done} concluídos · ${plan.partial} parciais de ${plan.total} blocos`:'Nenhum bloco planejado no período'),
+      v12Kpi('Revisões em dia',rev.pct===null?'—':rev.pct+'%',v12Tone(rev.pct),
+        rev.due?`${rev.onTime} no prazo · ${rev.late} com atraso · ${rev.pending} pendentes`:'Nenhuma revisão vencida no período',
+        backlog?`<small class="v12-alert">${backlog} ${backlog>1?'revisões atrasadas':'revisão atrasada'} na fila</small>`:''),
+      v12Kpi('Questões × meta',q.total?goalPct+'%':'—',v12Tone(q.total?goalPct:null),
+        `${q.total} feitas · média ${avg}/dia · meta ${goal}/dia`),
+      v12Kpi('Acerto em questões',q.acc===null?'—':q.acc+'%',v12Tone(q.acc),
+        q.total?`${q.correct}/${q.total} acertos${q.total<V12_SMALL_SAMPLE?' · amostra pequena':''}`:'Sem sessões registradas',
+        prevQ?v12Delta(q.acc,prevQ.acc):'')
+    ].join('');
+  }
+
+  function v12RenderDaily(){
+    const per=v12PerDay(),goal=v12Goal(),days=Array.from({length:14},(_,i)=>addDays(todayISO(),i-13));
+    const max=Math.max(goal*1.25,...days.map(d=>per[d]||0)),goalPos=Math.round(goal/max*100);
+    const met=days.filter(d=>(per[d]||0)>=goal).length,st=v12Streaks();
+    const wd=['D','S','T','Q','Q','S','S'];
+    const cols=days.map(d=>{
+      const n=per[d]||0,h=n?Math.max(4,Math.round(n/max*100)):0,cls=n>=goal?'met':n?'part':'zero';
+      return `<div class="v12-day ${cls}${d===todayISO()?' today':''}" title="${fmtDate(d)}: ${n} questões">
+        <span class="v12-day-val">${n||''}</span><div class="v12-day-track"><i style="height:${h}%"></i></div>
+        <small>${wd[parseISO(d).getDay()]}<br>${d.slice(8)}</small></div>`;
+    }).join('');
+    return `<article class="card v12-card">
+      <div class="v12-card-head"><div><h3>Questões × meta diária</h3><p>Últimos 14 dias · meta de ${goal} por dia</p></div>
+        <div class="v12-streak"><strong>${st.cur}</strong><span>dia${st.cur===1?'':'s'} seguidos na meta</span><small>melhor: ${st.best}</small></div></div>
+      <div class="v12-daily" role="img" aria-label="Questões por dia nos últimos 14 dias. Meta batida em ${met} de 14 dias.">
+        <div class="v12-goal-line" style="bottom:calc(34px + (100% - 56px) * ${(goalPos/100).toFixed(3)})"><span>meta</span></div>${cols}</div>
+      <p class="v12-foot">Meta batida em <b>${met}</b> de 14 dias. Altere a meta diária em Configurações.</p>
+    </article>`;
+  }
+
+  function v12RenderWeekly(){
+    const weeks=Array.from({length:8},(_,i)=>{
+      const b=v12WeekBounds(i-7),q=v12Questions(b);return {b,acc:q.acc,total:q.total};
+    });
+    const W=320,H=150,L=30,R=10,T=14,B=26,iw=W-L-R,ih=H-T-B;
+    const x=i=>L+iw*(i/7),y=v=>T+ih*(1-v/100);
+    let path='',open=false;
+    weeks.forEach((wk,i)=>{if(wk.acc===null){open=false;return;}path+=(open?'L':'M')+x(i).toFixed(1)+' '+y(wk.acc).toFixed(1)+' ';open=true;});
+    const grid=[0,50,100].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" class="v12-grid"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="v12-axis">${v}</text>`).join('');
+    const dots=weeks.map((wk,i)=>wk.acc===null?
+      `<text x="${x(i)}" y="${y(4)}" text-anchor="middle" class="v12-axis">—</text>`:
+      `<circle cx="${x(i)}" cy="${y(wk.acc)}" r="4.5" class="v12-dot tone-${v12Tone(wk.acc)}"><title>Semana de ${fmtDate(wk.b.start)}: ${wk.acc}% (${wk.total} questões)</title></circle>`).join('');
+    const labels=weeks.map((wk,i)=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle" class="v12-axis">${wk.b.start.slice(8)}/${wk.b.start.slice(5,7)}</text>`).join('');
+    const withData=weeks.filter(w=>w.acc!==null),last=withData[withData.length-1],first=withData[0];
+    let summary='Registre sessões no Banco de questões para ver a curva.';
+    if(withData.length===1)summary=`Só uma semana com dados (${last.acc}%). A tendência aparece a partir da segunda.`;
+    else if(withData.length>1){const d=last.acc-first.acc;summary=`${d>0?'Subiu':d<0?'Caiu':'Estável'} ${d?Math.abs(d)+' pp ':''}entre a primeira e a última semana com dados.`;}
+    const desc=weeks.map(w=>`${fmtDate(w.b.start)}: ${w.acc===null?'sem dados':w.acc+'%'}`).join('; ');
+    return `<article class="card v12-card">
+      <div class="v12-card-head"><div><h3>Evolução semanal de acertos</h3><p>Últimas 8 semanas · linha tracejada = ${V12_WEAK}%</p></div></div>
+      <svg class="v12-weekly" viewBox="0 0 ${W} ${H}" role="img" aria-label="Acerto semanal em questões. ${desc}">
+        ${grid}<line x1="${L}" x2="${W-R}" y1="${y(V12_WEAK)}" y2="${y(V12_WEAK)}" class="v12-target"/>
+        <path d="${path}" class="v12-line"/>${dots}${labels}</svg>
+      <p class="v12-foot">${summary}</p>
+    </article>`;
+  }
+
+  function v12RenderSubjects(w){
+    const rows=v12BySubject(w);
+    if(!rows.length)return `<article class="card v12-card"><div class="v12-card-head"><div><h3>Acertos por disciplina e assunto</h3><p>${v12PeriodLabel(w)}</p></div></div>
+      <div class="empty">Nenhuma sessão de questões neste período.</div>
+      <button type="button" class="btn soft" data-v12-go="questoes">Registrar sessão de questões</button></article>`;
+    const bar=(name,x,extra='')=>`<div class="v12-bar-head"><span>${name}</span><b class="tone-${v12Tone(x.rate)}">${x.rate}%</b></div>
+      <div class="v12-bar"><i class="tone-${v12Tone(x.rate)}" style="width:${x.rate}%"></i></div>
+      <small class="v12-bar-sub">${x.correct}/${x.total} acertos${x.total<V12_SMALL_SAMPLE?' · <em>amostra pequena</em>':''}${extra}</small>`;
+    const weak=rows.filter(r=>r.rate<V12_WEAK&&r.total>=V12_SMALL_SAMPLE).length;
+    const list=rows.map(s=>{
+      const open=v12OpenSubjects.has(s.key);
+      return `<div class="v12-subject${open?' open':''}">
+        <button type="button" class="v12-subject-btn" data-v12-subject="${escapeHtml(s.key)}" aria-expanded="${open}">
+          ${bar(escapeHtml(s.name),s,` · ${s.topics.length} assunto${s.topics.length>1?'s':''}`)}<span class="v12-caret" aria-hidden="true">▸</span></button>
+        ${open?`<div class="v12-topics">${s.topics.map(t=>`<div class="v12-topic">${bar(escapeHtml(t.name),t)}</div>`).join('')}</div>`:''}
+      </div>`;
+    }).join('');
+    return `<article class="card v12-card v12-wide">
+      <div class="v12-card-head"><div><h3>Acertos por disciplina e assunto</h3><p>${v12PeriodLabel(w)} · mais fracos primeiro · toque para abrir os assuntos</p></div>
+        <span class="badge ${weak?'orange':'green'}">${weak} abaixo de ${V12_WEAK}%</span></div>
+      <div class="v12-subjects">${list}</div>
+    </article>`;
+  }
+
+  function v12Render(){
+    const box=$('#v12Metrics');if(!box)return;
+    const w=v12Window(v12Period),q=v12Questions(w);
+    $$('#v12Metrics [data-v12-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v12Period===v12Period)));
+    $('#v12Kpis').innerHTML=v12RenderKpis(w);
+    $('#v12Charts').innerHTML=v12RenderDaily()+v12RenderWeekly();
+    $('#v12Subjects').innerHTML=v12RenderSubjects(w);
+    $('#v12DataNote').innerHTML=`Base do período (${v12PeriodLabel(w)}): <b>${q.sessions}</b> ${q.sessions===1?'sessão':'sessões'} de questões em <b>${q.days}</b> dia${q.days===1?'':'s'}. `+
+      `Questões e acertos dependem do que você registra no Banco de questões; execução e revisões vêm do plano e da agenda.`;
+  }
+
+  /* ---------- montagem ---------- */
+  function v12Css(){
+    if($('#v12Css'))return;
+    const st=document.createElement('style');st.id='v12Css';
+    st.textContent=`
+#v12Metrics{display:grid;gap:16px;margin:0 0 18px}
+#v12Metrics .v12-top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+#v12Metrics .v12-top h2{margin:0}
+#v12Metrics .v12-top p{margin:4px 0 0;color:var(--muted)}
+.v12-periods{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.v12-periods button{border:0;background:transparent;color:var(--text);padding:8px 14px;font:inherit;font-size:.85rem;cursor:pointer;min-height:38px}
+.v12-periods button[aria-pressed="true"]{background:var(--primary);color:#fff;font-weight:700}
+html.bat .v12-periods button[aria-pressed="true"]{color:#020912}
+.v12-periods button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+.v12-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.v12-kpi{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:16px;padding:14px 16px;display:grid;gap:4px;min-width:0}
+.v12-kpi.tone-good{border-left-color:var(--good)}.v12-kpi.tone-warn{border-left-color:var(--warn)}.v12-kpi.tone-bad{border-left-color:var(--bad)}
+.v12-kpi-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.v12-kpi strong{font-size:2rem;line-height:1.1;color:var(--text)}
+.v12-kpi small{color:var(--muted);line-height:1.35}
+.v12-kpi .v12-alert{color:var(--bad);font-weight:700}
+.v12-delta{font-weight:700}.v12-delta.up{color:var(--good)!important}.v12-delta.down{color:var(--bad)!important}
+.v12-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
+.v12-card{display:grid;gap:12px;align-content:start}
+.v12-card h3{margin:0}
+.v12-card-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.v12-card-head p{margin:4px 0 0;color:var(--muted);font-size:.85rem}
+.v12-foot{margin:0;color:var(--muted);font-size:.85rem}
+.v12-streak{text-align:right;display:grid;line-height:1.15}
+.v12-streak strong{font-size:1.6rem;color:var(--good)}
+.v12-streak span,.v12-streak small{color:var(--muted);font-size:.78rem}
+.v12-daily{position:relative;display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px;height:190px;align-items:end;padding-top:6px}
+.v12-goal-line{position:absolute;left:0;right:0;border-top:2px dashed var(--muted);opacity:.7;pointer-events:none}
+.v12-goal-line span{position:absolute;right:0;top:-18px;font-size:.7rem;color:var(--muted)}
+.v12-day{display:grid;grid-template-rows:16px 1fr 34px;height:100%;text-align:center;min-width:0}
+.v12-day-val{font-size:.68rem;color:var(--text);font-weight:700}
+.v12-day-track{position:relative;height:100%}
+.v12-day-track i{position:absolute;left:12%;right:12%;bottom:0;border-radius:6px 6px 2px 2px;background:var(--muted);opacity:.55}
+.v12-day.part .v12-day-track i{background:var(--warn);opacity:1}
+.v12-day.met .v12-day-track i{background:var(--good);opacity:1}
+.v12-day small{font-size:.66rem;color:var(--muted);line-height:1.2;padding-top:3px}
+.v12-day.today small{color:var(--text);font-weight:800}
+.v12-weekly{width:100%;height:auto;display:block}
+.v12-weekly .v12-grid{stroke:var(--line);stroke-width:1}
+.v12-weekly .v12-target{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 4}
+.v12-weekly .v12-line{fill:none;stroke:var(--primary);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.v12-weekly .v12-axis{fill:var(--muted);font-size:10px;font-family:inherit}
+.v12-weekly .v12-dot{stroke:var(--surface);stroke-width:2;fill:var(--muted)}
+.v12-weekly .v12-dot.tone-good{fill:var(--good)}.v12-weekly .v12-dot.tone-warn{fill:var(--warn)}.v12-weekly .v12-dot.tone-bad{fill:var(--bad)}
+.v12-subjects{display:grid;gap:8px}
+.v12-subject{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.v12-subject-btn{all:unset;box-sizing:border-box;display:grid;grid-template-columns:1fr auto;column-gap:10px;width:100%;padding:12px 14px;cursor:pointer;color:var(--text)}
+.v12-subject-btn>*:not(.v12-caret){grid-column:1}
+.v12-subject-btn:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+.v12-caret{grid-column:2;grid-row:1/span 3;align-self:center;color:var(--muted);transition:transform .15s}
+.v12-subject.open .v12-caret{transform:rotate(90deg)}
+.v12-bar-head{display:flex;justify-content:space-between;gap:10px;font-weight:700;min-width:0}
+.v12-bar-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v12-bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin:6px 0 4px}
+.v12-bar i{display:block;height:100%;border-radius:999px;background:var(--muted)}
+.v12-bar i.tone-good{background:var(--good)}.v12-bar i.tone-warn{background:var(--warn)}.v12-bar i.tone-bad{background:var(--bad)}
+b.tone-good{color:var(--good)}b.tone-warn{color:var(--warn)}b.tone-bad{color:var(--bad)}
+.v12-bar-sub{color:var(--muted)}
+.v12-topics{display:grid;gap:10px;padding:4px 14px 14px 26px;border-top:1px dashed var(--line)}
+.v12-topic{padding-top:8px}
+#v12DataNote{margin:0;padding:10px 14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:.85rem}
+body.dark .v12-day-track i{opacity:.7}
+@media (prefers-reduced-motion:reduce){.v12-caret{transition:none}}
+@media (max-width:520px){.v12-kpi strong{font-size:1.7rem}.v12-daily{height:170px}.v12-streak{text-align:left}}
+`;
+    document.head.appendChild(st);
+  }
+  function v12Mount(){
+    const prog=$('#progresso');if(!prog||$('#v12Metrics'))return;
+    v12Css();
+    const head=prog.querySelector('.section-head h2');if(head)head.textContent='Evolução & métricas';
+    const sub=prog.querySelector('.section-head p:last-child');if(sub)sub.textContent='Plano, revisões e questões num só painel — os números saem do que você registra no MEDCID.';
+    const oldToolbar=prog.querySelector(':scope > .plan-toolbar');if(oldToolbar)oldToolbar.hidden=true; // números agora vivem no painel
+    const box=document.createElement('section');box.id='v12Metrics';box.setAttribute('aria-label','Painel de desempenho');
+    box.innerHTML=`
+      <div class="v12-top"><div><h2>Painel de desempenho</h2><p>Execução, revisões e questões no mesmo lugar.</p></div>
+        <div class="v12-periods" role="group" aria-label="Período">
+          <button type="button" data-v12-period="7" aria-pressed="true">7 dias</button>
+          <button type="button" data-v12-period="30" aria-pressed="false">30 dias</button>
+          <button type="button" data-v12-period="all" aria-pressed="false">Tudo</button>
+        </div></div>
+      <div id="v12Kpis" class="v12-kpis"></div>
+      <div id="v12Charts" class="v12-row"></div>
+      <div id="v12Subjects"></div>
+      <p id="v12DataNote"></p>`;
+    box.addEventListener('click',e=>{
+      const p=e.target.closest('[data-v12-period]');if(p){v12Period=p.dataset.v12Period;v12Render();return;}
+      const s=e.target.closest('[data-v12-subject]');
+      if(s){const k=s.dataset.v12Subject;v12OpenSubjects.has(k)?v12OpenSubjects.delete(k):v12OpenSubjects.add(k);v12Render();
+        const again=box.querySelector(`[data-v12-subject="${CSS.escape(k)}"]`);if(again)again.focus();return;}
+      const g=e.target.closest('[data-v12-go]');if(g&&VALID_TABS.includes(g.dataset.v12Go))showTab(g.dataset.v12Go);
+    });
+    const anchor=$('#v11Evolution')||prog.querySelector('.section-head')?.nextElementSibling||null;
+    prog.insertBefore(box,anchor);
+    v12Render();
+  }
+
+  const v12PrevRender=renderAll;
+  renderAll=function(){const r=v12PrevRender.apply(this,arguments);try{v12Render();}catch(e){console.error('MEDCID v12',e);}return r;};
+
+  const v12PrevInit=init;
+  init=function(){
+    const r=v12PrevInit.apply(this,arguments);
+    try{v12Mount();state.medcidV12={version:V12,activatedAt:state.medcidV12?.activatedAt||new Date().toISOString()};save();}
+    catch(e){console.error('MEDCID v12',e);}
+    return r;
+  };
+})();
